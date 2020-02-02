@@ -1,8 +1,8 @@
-#baseURL = "https://example.com/"
+baseURL = "https://nicolascuestaquintero.com/"
 languageCode = "en-us"
-title = "Nicolas Cuesta"
+title = "Nicolas Cuesta "
 theme = "personal-web"
-copyright="© Nicolas Cuesta Quintero"
+#copyright="© Nicolas Cuesta Quintero"
 googleAnalytics = ""
 enableEmoji=true
 enableRobotsTXT=true

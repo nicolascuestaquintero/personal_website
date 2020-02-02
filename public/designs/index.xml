@@ -1,25 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Designs on Nicolas Cuesta</title>
+    <title>Designs on Nicolas Cuesta </title>
     <link>/designs/</link>
-    <description>Recent content in Designs on Nicolas Cuesta</description>
+    <description>Recent content in Designs on Nicolas Cuesta </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <copyright>© Nicolas Cuesta Quintero</copyright>
-    <lastBuildDate>Thu, 02 May 2019 19:47:09 +0200</lastBuildDate>
     
 	<atom:link href="/designs/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>Photoshop</title>
-      <link>/designs/photoshop/</link>
-      <pubDate>Thu, 02 May 2019 19:47:09 +0200</pubDate>
-      
-      <guid>/designs/photoshop/</guid>
-      <description></description>
-    </item>
     
   </channel>
 </rss>
