@@ -1,4 +1,4 @@
-baseURL = "https://nicolascuestaquintero.com/"
+#baseURL = "https://nicolascuestaquintero.com/"
 languageCode = "en-us"
 title = "Nicolas Cuesta"
 theme = "personal-web"
@@ -34,12 +34,13 @@ pygmentsCodeFences=true
   # Define how your sections will be called
   # when automatically pulled. For instance in the 404 page
   post = "article"
-  portfolio = "project"
+  #portfolio = "project"
 
 [params.sidebar]
-  backgroundImage = '' # header background image - default "/images/default_sidebar.jpg" - Photo by Tim Marshall on Unsplash
+  backgroundImage = "/images/sidebar.jpg" # header background image - default "/images/default_sidebar.jpg" - Photo by Tim Marshall on Unsplash
   gradientOverlay = '' # default: rgba(0,0,0,0.4),rgba(0,0,0,0.4)
-  logo = "" # - default "/images/edna-west.jpg"
+  logo = "/images/nicolas.jpg" # - default "/images/edna-west.jpg"
+  
 [params.assets]
   favicon = "logo.png"
   customCSS = ""
