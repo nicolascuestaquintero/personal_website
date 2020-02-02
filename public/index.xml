@@ -6,18 +6,18 @@
     <description>Recent content in HOME on Nicolas Cuesta</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 05 May 2016 21:48:51 -0700</lastBuildDate>
+    <lastBuildDate>Sun, 02 Feb 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>About</title>
+      <title>ABOUT</title>
       <link>/about/</link>
-      <pubDate>Thu, 05 May 2016 21:48:51 -0700</pubDate>
+      <pubDate>Sun, 02 Feb 2020 00:00:00 +0000</pubDate>
       
       <guid>/about/</guid>
-      <description>This is a &amp;ldquo;hello world&amp;rdquo; example websit</description>
+      <description>I created this website to get people to know my work, to share some of my knowledge in computational finance and create tools that people may find useful for their personal finance and their jobs. I will do my best to have some practical gadgets up to date at the home page. Anyway, you can find my posts in the blog section, where I will be solving interesting problems and replicating research papers main results.</description>
     </item>
     
     <item>
