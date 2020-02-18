@@ -13,3 +13,67 @@ I will be launching this website ASAP with an advanced mutual fund allocation to
 [Get to know me better](/about "Get to know me better")
 
 ### Selecting Mutual Funds in Colombia
+
+*(Information provided here do not constitute any kind of financial/investment advice but is only an exercise for academic purposes)*
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+
+dataset <- 
+  map_dfr(str_subset(dir("../static/sifi"), ".xlsx$"), 
+          function(i) {
+            df <- read_excel(str_c("../static/sifi/", i))[, 1:9]
+            df[, 1] <- parse_date(df[, 1, drop = TRUE], 
+                                  format = "%Y-%m-%d")
+            df[, 2:9] <- map_dfc(df[, 2:9], 
+                                 function(i) as.character(i))
+            df[, 6:9] <- map_dfc(df[, 6:9], 
+                                 function(i) {
+                                   suppressWarnings(parse_double(i))
+                                 })
+            return(df)
+          }) %>% 
+  drop_na() 
+
+colnames(dataset) <- c("Date",
+                       "Manager",
+                       "Category",
+                       "Public",
+                       "Name",
+                       "InvestorsCount",
+                       "MarketValue",
+                       "NAV",
+                       "DailyReturn")
+```
+
+```{r echo=FALSE}
+dataset %>% 
+  filter(Category != "Otros Fondos",
+         Category != "Otros Fondos Accionarios",
+         Category != "Fondo Inmobiliario de Desarrollo Nacional",
+         Name != "ALIANZA RENTA FIJA MERCADOS EMERGENTES - Tipo A") %>% 
+  mutate(DailyReturn = (1 + DailyReturn / 100) ^ (1 / 365) - 1) %>% 
+  group_by(Category) %>% 
+  summarise(MeanReturn = mean(DailyReturn) * 252,
+            Volatility = sd(DailyReturn) * sqrt(252),
+            Sharpe = MeanReturn / Volatility) %>% 
+  arrange(desc(MeanReturn)) %>% 
+  mutate(Category = str_remove(str_remove(Category, "Fondo "), "de "),
+         MeanReturnT = str_c(100 * round(MeanReturn, 3), "%"),
+         VolatilityT = str_c(100 * round(Volatility, 3), "%")) %>% 
+  mutate(Category = parse_factor(Category)) %>% 
+  filter(MeanReturn > 0) %>% 
+  ggplot(mapping = aes(x = Category, 
+                       y = MeanReturn,
+                       fill = MeanReturn)) +
+  geom_text(mapping = aes(label = MeanReturnT),
+            nudge_y = 0.0075) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme(legend.position = "none",
+        axis.text.x = NULL) +
+  labs(y = "Mean Daily Return (APR)")
+```
+
