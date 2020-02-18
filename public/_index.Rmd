@@ -1,0 +1,15 @@
+---
+title: HOME
+description: Welcome to this sample project
+images: ["/images/sample.jpg"]
+---
+
+Welcome to my personal website,
+
+**Sorry you do not find anything interesting yet, this website is under construction.**
+
+I will be launching this website ASAP with an advanced mutual fund allocation tool for the Colombian market using [sifi data](https://sificcolombia.lvaindices.com/estadisticas/), how to embed advanced plotly visualizations in Power BI and reproducing some interesting research papers on chaotic behaviour in capital markets.
+
+[Get to know me better](/about "Get to know me better")
+
+### Selecting Mutual Funds in Colombia
