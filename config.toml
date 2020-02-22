@@ -2,7 +2,7 @@
 languageCode = "en-us"
 title = "Nicolas Cuesta"
 theme = "personal-web"
-#copyright="© Nicolas Cuesta Quintero"
+copyright="© Nicolás Cuesta Quintero"
 googleAnalytics = ""
 enableEmoji=true
 enableRobotsTXT=true
