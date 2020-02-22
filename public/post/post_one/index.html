@@ -23,17 +23,17 @@
 <link rel="stylesheet" href="/syntax.min.css" integrity="" media="screen">
 
   <meta property="og:title" content="Insights on the IRR" />
-<meta property="og:description" content="Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes." />
+<meta property="og:description" content="Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that the IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/post_one/" />
 <meta property="article:published_time" content="2020-02-21T21:13:14-05:00" />
 <meta property="article:modified_time" content="2020-02-21T21:13:14-05:00" />
 
   <meta itemprop="name" content="Insights on the IRR">
-<meta itemprop="description" content="Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes.">
+<meta itemprop="description" content="Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that the IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes.">
 <meta itemprop="datePublished" content="2020-02-21T21:13:14-05:00" />
 <meta itemprop="dateModified" content="2020-02-21T21:13:14-05:00" />
-<meta itemprop="wordCount" content="1232">
+<meta itemprop="wordCount" content="1859">
 
 
 
@@ -166,7 +166,7 @@
   </svg>
 </div>
 
-  <span>6 minutes</span>
+  <span>9 minutes</span>
 </div>
 
 <div class="published-date">
@@ -184,9 +184,10 @@
 
 
 
-<p>Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing <em>=IRR(…)</em> or <em>=XIRR(…)</em> in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.</p>
+<p>Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing <em>=IRR(…)</em> or <em>=XIRR(…)</em> in MS Excel. The problem is that the IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.</p>
 <p>We will use the following libraries:</p>
 <pre class="r"><code>library(tidyverse)
+library(lubridate)
 library(transformr)
 library(gganimate)</code></pre>
 <div id="what-is-the-irr" class="section level2">
@@ -317,6 +318,7 @@ cat(round(100 * irr(example_one), 2), &quot;%&quot;)
 ## k:  2 xk:  0.1290048 NPV:  1.513261 
 ## k:  3 xk:  0.1294227 NPV:  0.0003029758 
 ## 12.94 %</code></pre>
+<p>Finally, it is important to mention that the IRR only exists if there is at least one negative cash flow. Otherwise, you will be receiving money out of no investment and your IRR would be infinite.</p>
 </div>
 </div>
 <div id="problems-with-the-irr" class="section level2">
@@ -326,12 +328,94 @@ cat(round(100 * irr(example_one), 2), &quot;%&quot;)
 <li>Multiple solutions.</li>
 <li>Divergence.</li>
 </ul>
-<p>Let’s consider each problem independently</p>
+<p>Let’s consider each problem independently.</p>
 <div id="multiple-solutions" class="section level3">
 <h3>Multiple solutions</h3>
+<p>The NPV formula, which we called <span class="math inline">\(f(r)\)</span>, in non-linear on <span class="math inline">\(r\)</span>. This means that it may have more than one solution or non solutions at all. In figure <a href="#fig:msol">2</a> I took a cash flow and plot its NPV for all of the rates in the interval <span class="math inline">\([-0.5, 2]\)</span>. Notice that there a more than one rate that satisfy <span class="math inline">\(NPV = 0\)</span>. Which one should you use? Well, probably the one that makes more sense for you according to your cash flow. However, be careful because different seeds can lead you to different solutions.</p>
+<pre class="r"><code># Build a random example
+set.seed(100)
+dates &lt;- c(as.Date(&quot;2020-01-15&quot;), vector(&quot;double&quot;, 49))
+for (i in 2:50) {
+  dates[i] &lt;- dates[i-1] %m+% 
+    days(round(runif(n = 1, 1, 100), 0))
+}
+cash &lt;- round(runif(50, -120000, 150000), 2)
+example_two &lt;- tibble(
+  Date = dates,
+  CF = cash
+)
+
+# Plot NPV for different rate
+tibble(
+  rate = seq(-0.5, 2, 0.01),
+  NPV = sapply(rate, function(x) npv(example_two, x)),
+) %&gt;%
+  ggplot(mapping = aes(x = rate,
+                       y = NPV)) +
+  geom_abline(intercept = 0, 
+              slope = 0, 
+              colour = &quot;red&quot;,
+              alpha = 0.5) +
+  geom_line(colour = &quot;skyblue&quot;,
+            size = 0.75)</code></pre>
+<div class="figure"><span id="fig:msol"></span>
+<img src="/post/post_one_files/figure-html/msol-1.png" alt="Multiple IRR problem." width="672" />
+<p class="caption">
+Figure 2: Multiple IRR problem.
+</p>
+</div>
 </div>
 <div id="divergence" class="section level3">
 <h3>Divergence</h3>
+<p>Since the method is taking the slope at each point to find <span class="math inline">\(x_{k+1}\)</span>, there would a problem if the slope intersects the x-axis very far from the origin or does not touch it at all. What if in the previous example we would have tried to find the negative IRR using a seed of -0.375. Since it is near the local maxima, its derivate (or the slope of the tangent line) is computationally equal to zero. We will be dividing by zero and the method would have failed.</p>
+<pre class="r"><code>tryCatch(
+  irr(example_two, -0.375), 
+  error = function(c) &quot;Divergence!&quot;
+)
+## k:  1 xk:  -0.375 NPV:  2666038 
+## k:  2 xk:  3.409414 NPV:  -199736.8 
+## k:  3 xk:  36.37398 NPV:  -133534.7 
+## k:  4 xk:  254.5252 NPV:  -101150.3 
+## k:  5 xk:  2355.364 NPV:  -80383.45 
+## k:  6 xk:  29062.29 NPV:  -66477.58 
+## k:  7 xk:  479267.1 NPV:  -56991.26 
+## k:  8 xk:  10807539 NPV:  -50471.92 
+## k:  9 xk:  343729847 NPV:  -45985.94 
+## k:  10 xk:  15921858934 NPV:  -42912.22 
+## k:  11 xk:  1.109194e+12 NPV:  -40827.02 
+## k:  12 xk:  1.200238e+14 NPV:  -39433.91 
+## k:  13 xk:  2.083163e+16 NPV:  -38521.43 
+## k:  14 xk:  5.986337e+18 NPV:  -37937.73 
+## k:  15 xk:  2.940584e+21 NPV:  -37574.51 
+## k:  16 xk:  2.553064e+24 NPV:  -37355.62 
+## k:  17 xk:  4.064356e+27 NPV:  -37228.55 
+## k:  18 xk:  1.236662e+31 NPV:  -37157.92 
+## k:  19 xk:  7.540053e+34 NPV:  -37120.56 
+## k:  20 xk:  9.718775e+38 NPV:  -37101.87 
+## k:  21 xk:  2.811922e+43 NPV:  -37093.1 
+## k:  22 xk:  1.951688e+48 NPV:  -37089.25 
+## k:  23 xk:  3.495884e+53 NPV:  -37087.68 
+## k:  24 xk:  1.750325e+59 NPV:  -37087.1 
+## k:  25 xk:  2.672173e+65 NPV:  -37086.9 
+## k:  26 xk:  1.367257e+72 NPV:  -37086.83 
+## k:  27 xk:  2.598102e+79 NPV:  -37086.82 
+## k:  28 xk:  2.049594e+87 NPV:  -37086.81 
+## k:  29 xk:  7.575065e+95 NPV:  -37086.81 
+## k:  30 xk:  1.495459e+105 NPV:  -37086.81 
+## k:  31 xk:  1.818168e+115 NPV:  -37086.81 
+## k:  32 xk:  1.588605e+126 NPV:  -37086.81 
+## k:  33 xk:  1.179413e+138 NPV:  -37086.81 
+## k:  34 xk:  8.922943e+150 NPV:  -37086.81 
+## k:  35 xk:  8.378567e+164 NPV:  -37086.81 
+## k:  36 xk:  1.209346e+180 NPV:  -37086.81 
+## k:  37 xk:  3.384079e+196 NPV:  -37086.81 
+## k:  38 xk:  2.361509e+214 NPV:  -37086.81 
+## k:  39 xk:  5.400514e+233 NPV:  -37086.81 
+## k:  40 xk:  5.443655e+254 NPV:  -37086.81 
+## k:  41 xk:  3.335809e+277 NPV:  -37086.81 
+## k:  42 xk:  1.761458e+302 NPV:  -37086.81 
+## k:  43 xk:  Inf NPV:  -37086.81
+## [1] &quot;Divergence!&quot;</code></pre>
 </div>
 </div>
 

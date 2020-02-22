@@ -17,7 +17,7 @@
       <pubDate>Fri, 21 Feb 2020 21:13:14 -0500</pubDate>
       
       <guid>/post/post_one/</guid>
-      <description>Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes.</description>
+      <description>Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing =IRR(…) or =XIRR(…) in MS Excel. The problem is that the IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes.</description>
     </item>
     
   </channel>

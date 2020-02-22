@@ -11,12 +11,13 @@ knitr::opts_chunk$set(collapse = TRUE)
 ```
 
 
-Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing *=IRR(...)* or *=XIRR(...)* in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.
+Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing *=IRR(...)* or *=XIRR(...)* in MS Excel. The problem is that the IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.
 
 We will use the following libraries:
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
+library(lubridate)
 library(transformr)
 library(gganimate)
 ```
@@ -163,6 +164,8 @@ irr <- function(cf, xi = 0.1, n = 100, tol = 1e-07) {
 cat(round(100 * irr(example_one), 2), "%")
 ```
 
+Finally, it is important to mention that the IRR only exists if there is at least one negative cash flow. Otherwise, you will be receiving money out of no investment and your IRR would be infinite.
+
 ## Problems with the IRR
 
 We can summarize the problems in two cases:
@@ -170,10 +173,50 @@ We can summarize the problems in two cases:
 - Multiple solutions.
 - Divergence.
 
-Let's consider each problem independently
+Let's consider each problem independently.
 
 ### Multiple solutions
 
+The NPV formula, which we called $f(r)$, in non-linear on $r$. This means that it may have more than one solution or non solutions at all. In figure \@ref(fig:msol) I took a cash flow and plot its NPV for all of the rates in the interval $[-0.5, 2]$. Notice that there a more than one rate that satisfy $NPV = 0$. Which one should you use? Well, probably the one that makes more sense for you according to your cash flow. However, be careful because different seeds can lead you to different solutions.  
+
+```{r msol, fig.cap='Multiple IRR problem.', tidy=FALSE}
+# Build a random example
+set.seed(100)
+dates <- c(as.Date("2020-01-15"), vector("double", 49))
+for (i in 2:50) {
+  dates[i] <- dates[i-1] %m+% 
+    days(round(runif(n = 1, 1, 100), 0))
+}
+cash <- round(runif(50, -120000, 150000), 2)
+example_two <- tibble(
+  Date = dates,
+  CF = cash
+)
+
+# Plot NPV for different rate
+tibble(
+  rate = seq(-0.5, 2, 0.01),
+  NPV = sapply(rate, function(x) npv(example_two, x)),
+) %>%
+  ggplot(mapping = aes(x = rate,
+                       y = NPV)) +
+  geom_abline(intercept = 0, 
+              slope = 0, 
+              colour = "red",
+              alpha = 0.5) +
+  geom_line(colour = "skyblue",
+            size = 0.75)
+
+```
+
 ### Divergence
 
+Since the method is taking the slope at each point to find $x_{k+1}$, there would a problem if the slope intersects the x-axis very far from the origin or does not touch it at all. What if in the previous example we would have tried to find the negative IRR using a seed of -0.375. Since it is near the local maxima, its derivate (or the slope of the tangent line) is computationally equal to zero. We will be dividing by zero and the method would have failed.
+
+```{r}
+tryCatch(
+  irr(example_two, -0.375), 
+  error = function(c) "Divergence!"
+)
+```
 
