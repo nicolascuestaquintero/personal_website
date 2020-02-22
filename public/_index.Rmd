@@ -6,15 +6,17 @@ images: ["/images/sample.jpg"]
 
 Welcome to my personal website,
 
-**Sorry you do not find anything interesting yet, this website is under construction.**
+**This website is still under contruction.**
 
-I will be launching this website ASAP with an advanced mutual fund allocation tool for the Colombian market using [sifi data](https://sificcolombia.lvaindices.com/estadisticas/), how to embed advanced plotly visualizations in Power BI and reproducing some interesting research papers on chaotic behaviour in capital markets.
-
-[Get to know me better](/about "Get to know me better")
+[Get to know me better](/resume "Get to know me better")
 
 ### Selecting Mutual Funds in Colombia
 
+A lot of friends and colleagues usually ask me what they should do with their savings and where to invest them. This is not an easy question from a technical point of view and the answer depends on your risk aversion degree, your investment horizon and how much you have to invest, among other important variables. For that reason, I decided to tackle this question using information of all of the Colombian mutual funds available for the general public, using [sifi data](https://sificcolombia.lvaindices.com/estadisticas/).
+
 *(Information provided here do not constitute any kind of financial/investment advice but is only an exercise for academic purposes)*
+
+#### Overiview
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 library(tidyverse)

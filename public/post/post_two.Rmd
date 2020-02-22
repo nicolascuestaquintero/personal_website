@@ -1,0 +1,35 @@
+---
+title: "Custom visualizations in Power BI"
+author: "Nicolas Cuesta Quintero"
+date: 2020-02-22T21:13:14-05:00
+categories: ["R"]
+tags: ["Power BI", "R", "Plotly"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
+
+Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error. The aim of this post is to show you how to embed HTML files in Power BI using R opening the doors for other libraries such as plotly, ggmap and gganimate, among others.
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(plotly)
+```
+
+## R and Power BI default visuals
+
+### How to insert R code into Power BI 
+
+### Limitations 
+
+## Creating custom visualizations
+
+### Setting up your computer
+
+### Fixing bugs
+
+### Go for it!
