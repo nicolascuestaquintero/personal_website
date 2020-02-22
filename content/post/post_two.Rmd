@@ -11,20 +11,41 @@ knitr::opts_chunk$set(collapse = TRUE)
 ```
 
 
-Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error. The aim of this post is to show you how to embed HTML files in Power BI using R opening the doors for other libraries such as plotly, ggmap and gganimate, among others.
+Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error. The aim of this post is to show you how to embed HTML files in Power BI using R, opening the doors for other libraries such as plotly, ggmap and gganimate, among others.
 
 We will use the following libraries:
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(plotly)
+library(dslabs)
 ```
 
 ## R and Power BI default visuals
 
+Consider US 2016 presidential elections polls data, from the *dlabs* package.
+
 ### How to insert R code into Power BI 
 
 Let's start with iris data set.
+
+```{r}
+polls_us_election_2016 %>% 
+  filter(state == "U.S.",
+         pollster == "Ipsos") %>% 
+  arrange(startdate) %>% 
+  select(Date = enddate, 
+         Clinton = rawpoll_clinton, 
+         Trump = rawpoll_trump) %>% 
+  gather(Trump, Clinton, 
+         key = "Candidate", 
+         value = "Poll") %>% 
+  ggplot(mapping = aes(x = Date,
+                       y = Poll,
+                       colour = Candidate)) + 
+  geom_line()
+```
+
 
 ### Limitations 
 

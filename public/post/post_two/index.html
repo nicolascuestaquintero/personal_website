@@ -33,7 +33,7 @@
 <meta itemprop="description" content="Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error.">
 <meta itemprop="datePublished" content="2020-02-22T21:13:14-05:00" />
 <meta itemprop="dateModified" content="2020-02-22T21:13:14-05:00" />
-<meta itemprop="wordCount" content="164">
+<meta itemprop="wordCount" content="219">
 
 
 
@@ -48,7 +48,7 @@
   <div class="intro">
     <div class="logo-container">
       <a href="/">
-        <img src='/images/nicolas.jpg' alt="Profile HOME" class="rounded-logo">
+        <img src='/images/nicolas.jpg' alt="Profile POST" class="rounded-logo">
       </a>
     </div>
     <h2>Nicolas Cuesta</h2>
@@ -166,7 +166,7 @@
   </svg>
 </div>
 
-  <span>1 minutes</span>
+  <span>2 minutes</span>
 </div>
 
 <div class="published-date">
@@ -184,15 +184,32 @@
 
 
 
-<p>Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error. The aim of this post is to show you how to embed HTML files in Power BI using R opening the doors for other libraries such as plotly, ggmap and gganimate, among others.</p>
+<p>Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error. The aim of this post is to show you how to embed HTML files in Power BI using R, opening the doors for other libraries such as plotly, ggmap and gganimate, among others.</p>
 <p>We will use the following libraries:</p>
 <pre class="r"><code>library(tidyverse)
-library(plotly)</code></pre>
+library(plotly)
+library(dslabs)</code></pre>
 <div id="r-and-power-bi-default-visuals" class="section level2">
 <h2>R and Power BI default visuals</h2>
+<p>Consider US 2016 presidential elections polls data, from the <em>dlabs</em> package.</p>
 <div id="how-to-insert-r-code-into-power-bi" class="section level3">
 <h3>How to insert R code into Power BI</h3>
 <p>Let’s start with iris data set.</p>
+<pre class="r"><code>polls_us_election_2016 %&gt;% 
+  filter(state == &quot;U.S.&quot;,
+         pollster == &quot;Ipsos&quot;) %&gt;% 
+  arrange(startdate) %&gt;% 
+  select(Date = enddate, 
+         Clinton = rawpoll_clinton, 
+         Trump = rawpoll_trump) %&gt;% 
+  gather(Trump, Clinton, 
+         key = &quot;Candidate&quot;, 
+         value = &quot;Poll&quot;) %&gt;% 
+  ggplot(mapping = aes(x = Date,
+                       y = Poll,
+                       colour = Candidate)) + 
+  geom_line()</code></pre>
+<p><img src="/post/post_two_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 </div>
 <div id="limitations" class="section level3">
 <h3>Limitations</h3>
