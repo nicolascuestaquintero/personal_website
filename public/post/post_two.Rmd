@@ -24,6 +24,8 @@ library(plotly)
 
 ### How to insert R code into Power BI 
 
+Let's start with iris data set.
+
 ### Limitations 
 
 ## Creating custom visualizations
