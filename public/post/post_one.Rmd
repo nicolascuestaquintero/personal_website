@@ -1,0 +1,179 @@
+---
+title: "Insights on the IRR"
+author: "Nicolas Cuesta Quintero"
+date: 2020-02-21T21:13:14-05:00
+categories: ["R"]
+tags: ["IRR", "XIRR", "NPV", "Newton-Raphson"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
+
+Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing *=IRR(...)* or *=XIRR(...)* in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(transformr)
+library(gganimate)
+```
+
+## What is the IRR?
+
+### Net Present Value (NPV)
+
+Let's start with another question: what is the Net Present Value? Broadly speaking, it is the difference between the present value of inflows and outflows. So, given an interest rate *r* (cost of opportunity), we can sum the present values of all our cash flows as:
+
+$$NPV = \sum_{t=0}^{n}{\frac{CF_{t}}{(1+r)^{-t}}}.$$
+
+Now, this formula has the problem that cash flows must be evenly separated. What we can do to solve this problem is to consider the number of days between the cash flows and the date when we are calculating the NPV. For instance, if we are at 02/20/2020 and the first cash flow comes at 02/25/2020, we define the time as $d-d_{0} = 5$, so we can modify the last formula to be
+
+$$NPV = \sum_{t=0}^{n}{\frac{CF_{t}}{(1+r)^{-(d_{t}-d_{0})/365}}}.$$
+
+Implement this formula in **R** is relatively easy. Let's assume we are provided a set of cash flows with their respective dates in a data frame.
+
+```{r}
+# Data frame with cash flows
+example_one <- tibble(
+  Date = as.Date(c("2020-01-01", 
+                   "2020-01-15", 
+                   "2020-01-31")),
+  CF = as.numeric(c(-50000, 
+                    500, 
+                    50000))
+)
+
+# NPV formula
+npv <- function(cf, r) {
+  cf <- cf %>% dplyr::arrange(Date)
+  d <- as.numeric(cf$Date - cf$Date[1])
+  df <- (1 + r) ^ (- (d / 365))
+  sum(cf$CF * df)
+}
+
+# Example!
+cat("$", round(npv(example_one, 0.05), 2))
+```
+
+### Internal Rate of Return (IRR)
+
+The IRR is the rate of return such that the $NPV = 0$. This is an interesting rate because it can tell us whether our project is good enough given our cost of capital. Imagine that you have an IRR of 10%. If your cost of capital, $r$, is a little bit higher, since NPV is inversely proportional to the rate of return then the NPV will be negative, which means that your capital is too expensive for that project and it is not worth it. Conversely, if your cost of capital is lower than the IRR the project is good enough. 
+
+## How to calculate it?
+
+Given a set of cash flows with their respective dates, we can think of the NPV as a function of the rate, $NPV = f(r)$. If we only had one outflow and then an inflow, we can find the IRR analytically by solving a quadratic equation. Moreover, if we go up to five total cash flows, we might be able to find the IRR manually. However, this problem may have no analytical solution for six or more cash flows. Then, we got to use numerical methods to solve this problem. 
+
+From the many methods available for solving non-linear functions numerically I will use Newton-Raphson, which I consider is the most appropriate for this problem and which I suspect is used by MS Excel. The problem can be summarized to find $\overline{r}$ such that
+
+$$f(\overline{r}) = 0.$$
+
+In the following subsection I will explain the mathematical details of the method. If you already now them you can jump to the next subsection where I will show how to use it for finding the IRR.  
+
+### The Newton-Raphson numerical method
+
+Consider a smooth real-valued function $f:\mathbb{R}\rightarrow\mathbb{R}$. Assume that $x$ is a solution of $f$ (i.e. $f(x)=0$) and that we know a number $\overline{x}$ such that $x-\overline{x}\approx 0$. Then, we can expand $f$ using Taylor series around $\overline{x}$ as
+
+$$f(x)=f(\overline{x})+(x-\overline{x})f'(\overline{x})+\frac{1}{2}(x-\overline{x})^{2}f''(\xi(x)).$$
+
+Since $x$ is a solution we have that $f(x)=0$. Moreover, given that $x-\overline{x}\approx 0$ we neglect quadratic terms or higher degree terms in the series. Then,
+
+$$0\approx f(\overline{x})+(x-\overline{x})f'(\overline{x}),$$
+
+$$x\approx \overline{x}-\frac{f(\overline{x})}{f'(\overline{x})}.$$
+
+By using fixed point theorems, we can show that given an initial seed $x_{0}$ ($=\overline{x}$), we can find the solution by the iteration
+
+$$x_{k+1}=x_{k}-\frac{f(x_{k})}{f'(x_{k})}.$$
+
+The geometrical interpretation is really interesting. We find the tanget line to the point $f(x_{k})$ and use the intersect of this line with the x-axis as $x_{k+1}$. In figure \@ref(fig:newton) the iteration is shown for the function $f(x)=e^{-x}-sin(x)$ in the interval $[0, 2]$ with seed $x=1$.
+
+```{r newton, fig.cap='Newton-Raphson iteration.', tidy=FALSE}
+# Create function and its derivative
+f <- function(x) exp(-x) - sin(x)    # Function
+fp <- function(x) -exp(-x) - cos(x)  # First derivative
+sl <- function(u, i) y[i] + yp[i] * (u - x[i]) # Tangent
+
+# Data frame used for animation
+df <- tibble(
+  k = sort(rep(1:4, 201)),
+  x = rep(seq(0, 2, 0.01), 4),
+  `function` = f(x),
+  `tagent` = rep(0, 201 * 4) 
+)
+
+# Newton-Raphson iteration
+k <- 1:4
+x <- vector("double", 4L)
+y <- vector("double", 4L)
+yp <- vector("double", 4L)
+x[1] <- 1; y[1] <- f(1); yp[1] <- fp(1)
+for (k in 1:4) {
+  x[k+1] <- x[k] - f(x[k]) / fp(x[k])
+  y[k+1] <- f(x[k+1]); yp[k+1] <- fp(x[k+1])
+}
+
+# Animation for the tangent line
+df %>% 
+  mutate(`tangent` = unlist(map2(x, k, sl))) %>% 
+  gather(`function`, `tangent`, 
+         key = "plot", value = "value") %>% 
+  ggplot(aes(x = x,
+             y = value,
+             colour = plot)) +
+  geom_line() +
+  transition_time(k) +
+  ease_aes('linear') +
+  labs(title = 'k: {frame_time}', 
+       x = 'x', 
+       y = 'f(x)',
+       caption = "Nicolás Cuesta Quintero") 
+```
+
+Notice that, as the iterations continue, the intersection between the function and the tangent line matches the root of the equation.
+
+### Finding the IRR
+
+To create a function that allows us to calculate the IRR we can set a maximum number of iterations and a tolerance level. The former works in the case the method has no convergence because we do not want our program to keep running forever. The latter is for the case we find a rate that returns an NPV close enough to zero (it is unlikely that you get an exact zero since computers have memory constraints). Finally, we need a seed for the method to start. I will leave 10% as a default, but as I wil show later, seeds can be problematic.
+
+```{r}
+# We need a function for NPV derivative respect to r
+npvp <- function(cf, r) {
+  cf <- cf %>% dplyr::arrange(Date)
+  d <- as.numeric(cf$Date - cf$Date[1])
+  df <- (1 + r) ^ (- (d / 365))
+  sum(- (d / 365) * cf$CF * df / (1 + r))
+}
+
+# Now we can go ahead with the irr function
+irr <- function(cf, xi = 0.1, n = 100, tol = 1e-07) {
+  for (k in 1:n) {
+    cat("k: ", k, "xk: ", xi, "NPV: ", npv(cf, xi), "\n")
+    xp <- xi - npv(cf, xi) / npvp(cf, xi)
+    if (abs(xp - xi) < tol) return(xp)
+    xi <- xp
+  }
+  print("Root was not found")
+  invisible(xi)
+}
+
+# Example!
+cat(round(100 * irr(example_one), 2), "%")
+```
+
+## Problems with the IRR
+
+We can summarize the problems in two cases:
+
+- Multiple solutions.
+- Divergence.
+
+Let's consider each problem independently
+
+### Multiple solutions
+
+### Divergence
+
+

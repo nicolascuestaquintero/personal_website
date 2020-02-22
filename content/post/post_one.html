@@ -1,0 +1,160 @@
+---
+title: "Insights on the IRR"
+author: "Nicolas Cuesta Quintero"
+date: 2020-02-21T21:13:14-05:00
+categories: ["R"]
+tags: ["IRR", "XIRR", "NPV", "Newton-Raphson"]
+---
+
+
+
+<p>Have you ever wondered how is the Internal Rate of Return (IRR) calculated? Many of my colleagues that come from business school understand the concept and how to use it, but when we talk about its calculation all they can think about is doing <em>=IRR(…)</em> or <em>=XIRR(…)</em> in MS Excel. The problem is that IRR is not that simple and can lead to many problems or mistaken solutions that may fool anyone with a complex cash flow that have no idea what is happening behind scenes. In this post, I would like to get into the nuts and bolts of IRR calculation and exemplify when can be leading to wrong answers.</p>
+<p>We will use the following libraries:</p>
+<pre class="r"><code>library(tidyverse)
+library(transformr)
+library(gganimate)</code></pre>
+<div id="what-is-the-irr" class="section level2">
+<h2>What is the IRR?</h2>
+<div id="net-present-value-npv" class="section level3">
+<h3>Net Present Value (NPV)</h3>
+<p>Let’s start with another question: what is the Net Present Value? Broadly speaking, it is the difference between the present value of inflows and outflows. So, given an interest rate <em>r</em> (cost of opportunity), we can sum the present values of all our cash flows as:</p>
+<p><span class="math display">\[NPV = \sum_{t=0}^{n}{\frac{CF_{t}}{(1+r)^{-t}}}.\]</span></p>
+<p>Now, this formula has the problem that cash flows must be evenly separated. What we can do to solve this problem is to consider the number of days between the cash flows and the date when we are calculating the NPV. For instance, if we are at 02/20/2020 and the first cash flow comes at 02/25/2020, we define the time as <span class="math inline">\(d-d_{0} = 5\)</span>, so we can modify the last formula to be</p>
+<p><span class="math display">\[NPV = \sum_{t=0}^{n}{\frac{CF_{t}}{(1+r)^{-(d_{t}-d_{0})/365}}}.\]</span></p>
+<p>Implement this formula in <strong>R</strong> is relatively easy. Let’s assume we are provided a set of cash flows with their respective dates in a data frame.</p>
+<pre class="r"><code># Data frame with cash flows
+example_one &lt;- tibble(
+  Date = as.Date(c(&quot;2020-01-01&quot;, 
+                   &quot;2020-01-15&quot;, 
+                   &quot;2020-01-31&quot;)),
+  CF = as.numeric(c(-50000, 
+                    500, 
+                    50000))
+)
+
+# NPV formula
+npv &lt;- function(cf, r) {
+  cf &lt;- cf %&gt;% dplyr::arrange(Date)
+  d &lt;- as.numeric(cf$Date - cf$Date[1])
+  df &lt;- (1 + r) ^ (- (d / 365))
+  sum(cf$CF * df)
+}
+
+# Example!
+cat(&quot;$&quot;, round(npv(example_one, 0.05), 2))
+## $ 298.96</code></pre>
+</div>
+<div id="internal-rate-of-return-irr" class="section level3">
+<h3>Internal Rate of Return (IRR)</h3>
+<p>The IRR is the rate of return such that the <span class="math inline">\(NPV = 0\)</span>. This is an interesting rate because it can tell us whether our project is good enough given our cost of capital. Imagine that you have an IRR of 10%. If your cost of capital, <span class="math inline">\(r\)</span>, is a little bit higher, since NPV is inversely proportional to the rate of return then the NPV will be negative, which means that your capital is too expensive for that project and it is not worth it. Conversely, if your cost of capital is lower than the IRR the project is good enough.</p>
+</div>
+</div>
+<div id="how-to-calculate-it" class="section level2">
+<h2>How to calculate it?</h2>
+<p>Given a set of cash flows with their respective dates, we can think of the NPV as a function of the rate, <span class="math inline">\(NPV = f(r)\)</span>. If we only had one outflow and then an inflow, we can find the IRR analytically by solving a quadratic equation. Moreover, if we go up to five total cash flows, we might be able to find the IRR manually. However, this problem may have no analytical solution for six or more cash flows. Then, we got to use numerical methods to solve this problem.</p>
+<p>From the many methods available for solving non-linear functions numerically I will use Newton-Raphson, which I consider is the most appropriate for this problem and which I suspect is used by MS Excel. The problem can be summarized to find <span class="math inline">\(\overline{r}\)</span> such that</p>
+<p><span class="math display">\[f(\overline{r}) = 0.\]</span></p>
+<p>In the following subsection I will explain the mathematical details of the method. If you already now them you can jump to the next subsection where I will show how to use it for finding the IRR.</p>
+<div id="the-newton-raphson-numerical-method" class="section level3">
+<h3>The Newton-Raphson numerical method</h3>
+<p>Consider a smooth real-valued function <span class="math inline">\(f:\mathbb{R}\rightarrow\mathbb{R}\)</span>. Assume that <span class="math inline">\(x\)</span> is a solution of <span class="math inline">\(f\)</span> (i.e. <span class="math inline">\(f(x)=0\)</span>) and that we know a number <span class="math inline">\(\overline{x}\)</span> such that <span class="math inline">\(x-\overline{x}\approx 0\)</span>. Then, we can expand <span class="math inline">\(f\)</span> using Taylor series around <span class="math inline">\(\overline{x}\)</span> as</p>
+<p><span class="math display">\[f(x)=f(\overline{x})+(x-\overline{x})f&#39;(\overline{x})+\frac{1}{2}(x-\overline{x})^{2}f&#39;&#39;(\xi(x)).\]</span></p>
+<p>Since <span class="math inline">\(x\)</span> is a solution we have that <span class="math inline">\(f(x)=0\)</span>. Moreover, given that <span class="math inline">\(x-\overline{x}\approx 0\)</span> we neglect quadratic terms or higher degree terms in the series. Then,</p>
+<p><span class="math display">\[0\approx f(\overline{x})+(x-\overline{x})f&#39;(\overline{x}),\]</span></p>
+<p><span class="math display">\[x\approx \overline{x}-\frac{f(\overline{x})}{f&#39;(\overline{x})}.\]</span></p>
+<p>By using fixed point theorems, we can show that given an initial seed <span class="math inline">\(x_{0}\)</span> (<span class="math inline">\(=\overline{x}\)</span>), we can find the solution by the iteration</p>
+<p><span class="math display">\[x_{k+1}=x_{k}-\frac{f(x_{k})}{f&#39;(x_{k})}.\]</span></p>
+<p>The geometrical interpretation is really interesting. We find the tanget line to the point <span class="math inline">\(f(x_{k})\)</span> and use the intersect of this line with the x-axis as <span class="math inline">\(x_{k+1}\)</span>. In figure <a href="#fig:newton">1</a> the iteration is shown for the function <span class="math inline">\(f(x)=e^{-x}-sin(x)\)</span> in the interval <span class="math inline">\([0, 2]\)</span> with seed <span class="math inline">\(x=1\)</span>.</p>
+<pre class="r"><code># Create function and its derivative
+f &lt;- function(x) exp(-x) - sin(x)    # Function
+fp &lt;- function(x) -exp(-x) - cos(x)  # First derivative
+sl &lt;- function(u, i) y[i] + yp[i] * (u - x[i]) # Tangent
+
+# Data frame used for animation
+df &lt;- tibble(
+  k = sort(rep(1:4, 201)),
+  x = rep(seq(0, 2, 0.01), 4),
+  `function` = f(x),
+  `tagent` = rep(0, 201 * 4) 
+)
+
+# Newton-Raphson iteration
+k &lt;- 1:4
+x &lt;- vector(&quot;double&quot;, 4L)
+y &lt;- vector(&quot;double&quot;, 4L)
+yp &lt;- vector(&quot;double&quot;, 4L)
+x[1] &lt;- 1; y[1] &lt;- f(1); yp[1] &lt;- fp(1)
+for (k in 1:4) {
+  x[k+1] &lt;- x[k] - f(x[k]) / fp(x[k])
+  y[k+1] &lt;- f(x[k+1]); yp[k+1] &lt;- fp(x[k+1])
+}
+
+# Animation for the tangent line
+df %&gt;% 
+  mutate(`tangent` = unlist(map2(x, k, sl))) %&gt;% 
+  gather(`function`, `tangent`, 
+         key = &quot;plot&quot;, value = &quot;value&quot;) %&gt;% 
+  ggplot(aes(x = x,
+             y = value,
+             colour = plot)) +
+  geom_line() +
+  transition_time(k) +
+  ease_aes(&#39;linear&#39;) +
+  labs(title = &#39;k: {frame_time}&#39;, 
+       x = &#39;x&#39;, 
+       y = &#39;f(x)&#39;,
+       caption = &quot;Nicolás Cuesta Quintero&quot;) </code></pre>
+<div class="figure"><span id="fig:newton"></span>
+<img src="/post/post_one_files/figure-html/newton-1.gif" alt="Newton-Raphson iteration."  />
+<p class="caption">
+Figure 1: Newton-Raphson iteration.
+</p>
+</div>
+<p>Notice that, as the iterations continue, the intersection between the function and the tangent line matches the root of the equation.</p>
+</div>
+<div id="finding-the-irr" class="section level3">
+<h3>Finding the IRR</h3>
+<p>To create a function that allows us to calculate the IRR we can set a maximum number of iterations and a tolerance level. The former works in the case the method has no convergence because we do not want our program to keep running forever. The latter is for the case we find a rate that returns an NPV close enough to zero (it is unlikely that you get an exact zero since computers have memory constraints). Finally, we need a seed for the method to start. I will leave 10% as a default, but as I wil show later, seeds can be problematic.</p>
+<pre class="r"><code># We need a function for NPV derivative respect to r
+npvp &lt;- function(cf, r) {
+  cf &lt;- cf %&gt;% dplyr::arrange(Date)
+  d &lt;- as.numeric(cf$Date - cf$Date[1])
+  df &lt;- (1 + r) ^ (- (d / 365))
+  sum(- (d / 365) * cf$CF * df / (1 + r))
+}
+
+# Now we can go ahead with the irr function
+irr &lt;- function(cf, xi = 0.1, n = 100, tol = 1e-07) {
+  for (k in 1:n) {
+    cat(&quot;k: &quot;, k, &quot;xk: &quot;, xi, &quot;NPV: &quot;, npv(cf, xi), &quot;\n&quot;)
+    xp &lt;- xi - npv(cf, xi) / npvp(cf, xi)
+    if (abs(xp - xi) &lt; tol) return(xp)
+    xi &lt;- xp
+  }
+  print(&quot;Root was not found&quot;)
+  invisible(xi)
+}
+
+# Example!
+cat(round(100 * irr(example_one), 2), &quot;%&quot;)
+## k:  1 xk:  0.1 NPV:  108.02 
+## k:  2 xk:  0.1290048 NPV:  1.513261 
+## k:  3 xk:  0.1294227 NPV:  0.0003029758 
+## 12.94 %</code></pre>
+</div>
+</div>
+<div id="problems-with-the-irr" class="section level2">
+<h2>Problems with the IRR</h2>
+<p>We can summarize the problems in two cases:</p>
+<ul>
+<li>Multiple solutions.</li>
+<li>Divergence.</li>
+</ul>
+<p>Let’s consider each problem independently</p>
+<div id="multiple-solutions" class="section level3">
+<h3>Multiple solutions</h3>
+</div>
+<div id="divergence" class="section level3">
+<h3>Divergence</h3>
+</div>
+</div>
