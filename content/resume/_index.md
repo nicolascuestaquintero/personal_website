@@ -3,11 +3,12 @@ title: RESUME
 description: 'Resume'
 ---
 
-Download the [spanish](/pdf/cv_spanish.pdf) or the [english](/pdf/cv_english.pdf) version for more info.
+Download the full version in [spanish](/pdf/cv_spanish.pdf) or [english](/pdf/cv_english.pdf) for more info.
 
+### Profile
 Financial Engineer and candidate to a master's in computational and scientific modeling. Located in Medellín, Colombia, he considers himself as a Finance passionate and an R enthusiast, always trying to tackle financial problems from a quantitative and computational perspective. His recent experience has let him improve his computational skills, learn about Business Intelligence and dive deep into real estate and alternative investments Finance. 
 
-## Experience
+### Experience
 &nbsp;
 
 * Business Analyst - RealPage Inc.
@@ -18,14 +19,14 @@ Financial Engineer and candidate to a master's in computational and scientific m
 
 * Financial Risks intern - Isagen ESP.
 
-## Education
+### Education
 &nbsp;
 
 * MSc (candidate) Scientific and computational modeling - UdeM.
 
 * Financial Engineering - UdeM.
 
-## Languages
+### Languages
 &nbsp;
 
 * English (Business proficiency)
