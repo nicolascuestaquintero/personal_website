@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>© Nicolás Cuesta Quintero</copyright>
-    <lastBuildDate>Sat, 22 Feb 2020 18:00:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 23 Feb 2020 19:00:00 -0500</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
@@ -15,7 +15,7 @@
     <item>
       <title>Custom visualizations in Power BI</title>
       <link>/post/post_two/</link>
-      <pubDate>Sat, 22 Feb 2020 18:00:00 -0500</pubDate>
+      <pubDate>Sun, 23 Feb 2020 19:00:00 -0500</pubDate>
       
       <guid>/post/post_two/</guid>
       <description>Microsoft Power BI is the current leader in the Gartner Magic Quadrant for Business Intelligence, and one of its main features is its capability for reading both R and Python code. But here is the thing, usually R plots remain as static images and lack of interactivity. Say, you want to know a point in an R scatter plot what value represents exactly. In R, you can use plotly to add this characteristic to your graphs but using plotly with Power BI default R code compiler leads to an error.</description>

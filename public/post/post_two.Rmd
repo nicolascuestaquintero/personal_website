@@ -1,7 +1,7 @@
 ---
 title: "Custom visualizations in Power BI"
 author: "Nicolas Cuesta Quintero"
-date: 2020-02-22T18:00:00-05:00
+date: 2020-02-23T19:00:00-05:00
 categories: ["R"]
 tags: ["Power BI", "R", "Plotly"]
 ---
@@ -25,7 +25,7 @@ library(dslabs)
 
 Consider US 2016 presidential election polls data from the *dlabs* package. What I want to do right now is to create a visualization that allows us to know which prediction was made by pollsters graded A+ for Hillary Clinton and Donald Trump throughout 2016. I will use raw data instead of adjusted data since I want to know how far did polls put Hillary ahead of Trump despite their clear error. For the sake of simplicity, I will consider only general US data not segregated per State.
 
-```{r}
+```{r, width = 500, height = 500, fig.cap="US 2016 election race polls."}
 p <- polls_us_election_2016 %>% 
   filter(grade == "A+",
          state == "U.S.") %>% 
@@ -35,7 +35,7 @@ p <- polls_us_election_2016 %>%
          Trump = rawpoll_trump) %>% 
   gather(Trump, Clinton, 
          key = "Candidate", 
-         value = "Poll") %>% 
+         value = "Poll") %>%
   ggplot(mapping = aes(x = Date,
                        y = Poll,
                        colour = Candidate)) + 
@@ -44,6 +44,7 @@ p <- polls_us_election_2016 %>%
              nrow = 3) +
   scale_x_date(date_labels = "%b-%y",
                date_breaks = "1 month") +
+  scale_y_continuous(limits = c(30, 60)) +
   labs(x = "", 
        y = "Poll (% of total survey)", 
        title = "Hillary vs. Trump (2016)") +
@@ -55,20 +56,107 @@ p <- polls_us_election_2016 %>%
 p
 ```
 
-This plot is really helpful and let us get a general picture of what happened: pollsters in fact put Hillary Clinton over Donald Trump for most of the electoral race. Moreover, this plot can be tailored and transformed in many ways that may be a pain in the ass on Power BI. However, it has a bigger problem: it lacks of interactivity. For instance, it is almost imposible to say at which day ABC News and the Washington Post started their polls, neither how much was Donald Trump behind Hillary.
+This plot is really helpful and let us get a general picture of what happened: pollsters in fact put Hillary Clinton over Donald Trump for most of the electoral race. Moreover, this plot can be tailored and transformed in many ways that would be really hard on Power BI/DAX. However, it has a bigger problem: it lacks of interactivity. For instance, it is almost imposible to say at which day ABC News and the Washington Post started their polls, neither how much was Donald Trump behind Hillary.
 
 Luckily, plotly solve this problem relatively easy:
 
 ```{r}
-ggplotly(p)
+ggplotly(p, width = 500, height = 500)
 ```
 
-Let's move now to Power BI and see what would have happened.
+Let's move now to Power BI and see what would have happened. I copied the modified dataset as a csv file and uploaded it to Power BI desktop. As can bee seen in the image below, potly does not create a visual itself so it leads to an error in Power BI. 
+
+<center>
+![Figure 2. Problems with plotly in Power BI.](/post/images/post_two_powebierror.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+In the following section I will explain how to create custom visuals for Power BI using R, which will allow us to use plotly and many other R packages.
 
 ## Creating custom visualizations
 
+This is an step by step tutorial in Windows. It looks like a large and complicated procedure, but after your first time you will notice that it is not that hard. I will show screenshots of each step so you can replicate them in your computer easily.
+
 ### Setting up your computer
 
-### Fixing bugs
+**1.** Verify that you have installed the required packages. In case you do not, install them.
 
-### Go for it!
+```{r}
+c("tidyverse", 
+  "XML", 
+  "htmlwidgets"
+) %in% installed.packages()
+```
+
+**2.** Install node js. You can find it [here](https://nodejs.org/es/).
+
+**3.** Go to Power Shell and install Power BI visual tools.
+
+<center>
+![Figure 3. Installing Power BI visuals tools.](/post/images/post_two_powershell.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+Once is installed you can keep working in Power Shell but I recommend to move to CMD. I have had problems in Power Shell that I did not at CMD, although I don't really know why. Also, you can check that the installation was succesfull if you get this result when you call Power BI visuals tools.
+
+<center>
+![Figure 4. Check that the installation ran succesfully.](/post/images/post_two_checking.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+This is all what you need to set up your computer, now you are ready to create your own visualizations.
+
+### Organize your package
+
+**4.** Create a directory where you want to save your visuals and go to that folder with the command prompt (use *cd* to move from one folder to another one and *mkdir* to create a new one). In my case I called it PBIVisualizations.
+
+**5.** Create a template for the visualization.
+
+<center>
+![Figure 5. Create a template visualization.](/post/images/post_two_template.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+**6.** Here we have to make some modifications in the package since it comes with some bugs. For this step you can use your IDE of preference but I strongly recommend Visual Studio.
+&nbsp;
+
+- Go to *pbiviz.json* and add at least a name, email, description and supportUrl. I also recommend to change the guid field so your visualization does not carry a name too long and meaningless.
+
+<center>
+![Figure 6. Fix visual.ts file bug.](/post/images/post_two_visualts.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+&nbsp;
+&nbsp;
+
+- Go to *dependencies.json* and add any other library you are using with the same format it has for the other libraries.
+
+- In the folder *src*, there is a file called *visual.ts*. Open it and replace ‘NodeListOf’ with ‘HTMLCollectionOf’.
+
+- You can also go to the *assets* folder and change the icon for another image. This is the one that appears in the right panel at Power BI with all of the others visualizations.
+
+**7.** Now the most interesting part of the tutorial: creating the visualization with our R code. Open the file *script.R* and paste the code we made in the "Actual code" section. Personally, I like to delete all of the semicolons and change the = for <-, but that's your call. There is one important trick you have to remember:
+&nbsp;
+
+- In Power BI, the datasets that are dragged to our custom visualization are called Values in the file *scrip.R*, so you must adapt your code to get data from a data frame called Values.
+
+<center>
+![Figure 7. Where to paste R code.](/post/images/post_two_script.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+**8.** Go back to CMD. move to the folder that has the visualization package and run the function to create the *.pbiviz file*.
+
+<center>
+![Figure 8. Create custom visual.](/post/images/post_two_package.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+**9.** Import your custom visualization to Power BI. The file will be located in your package directory, in a folder called *dist*.
+
+<center>
+![Figure 8. Import custom visual.](/post/images/post_two_import.png){#id .class width=100% height=100%}
+</center>
+&nbsp;
+
+**10.** You can publish your visualizations using your business account of Power BI, but you may need to verify [here](https://docs.microsoft.com/en-us/power-bi/service-r-packages-support/) that the R libraries you are using are available.
