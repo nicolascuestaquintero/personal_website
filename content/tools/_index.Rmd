@@ -143,4 +143,4 @@ crosstalk::bscols(widths = c(12, NA),
 <br>
 Since the Variance Coeffcient (CV) is defined as the volatility divided by the expected return, it is clear that you want the lower positive value for it. Categories that are at the top left of the plot dominate those at the bottom right. Among those categories dominating you may want to take an special look to those of your risk profile.
 
-You may be wondering now, I know what categories are the most adequate for me, but what specific funds/managers should I pick? I will provide the tools for solving this questions shortly, keep looking at my webpage! 
+You may be wondering now, I know what categories are the most adequate for me, but what specific funds/managers should I pick? I will provide the tools for solving this question shortly, keep looking at my webpage! 
