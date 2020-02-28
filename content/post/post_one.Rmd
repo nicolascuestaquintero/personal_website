@@ -102,7 +102,7 @@ df <- tibble(
   k = sort(rep(1:4, 201)),
   x = rep(seq(0, 2, 0.01), 4),
   `function` = f(x),
-  `tagent` = rep(0, 201 * 4) 
+  `tangent` = rep(0, 201 * 4) 
 )
 
 # Newton-Raphson iteration
@@ -118,19 +118,21 @@ for (k in 1:4) {
 
 # Animation for the tangent line
 df %>% 
-  mutate(`tangent` = unlist(map2(x, k, sl))) %>% 
+  mutate(k = factor(as.character(k), levels = c("1", "2", "3", "4")),
+         `tangent` = unlist(map2(x, k, sl))) %>%
   gather(`function`, `tangent`, 
          key = "plot", value = "value") %>% 
   ggplot(aes(x = x,
              y = value,
              colour = plot)) +
   geom_line() +
-  transition_time(k) +
+  transition_states(states = k, 
+                    transition_length = 0) +
   ease_aes('linear') +
-  labs(title = 'k: {frame_time}', 
-       x = 'x', 
-       y = 'f(x)',
-       caption = "Nicolás Cuesta Quintero") 
+  labs(title = 'Iteration: {closest_state}', #'k: {frame_time}', 
+  x = 'x', 
+  y = 'f(x)',
+  caption = "Nicolás Cuesta Quintero")
 ```
 
 Notice that, as the iterations continue, the intersection between the function and the tangent line matches the root of the equation.

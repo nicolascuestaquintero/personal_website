@@ -76,7 +76,7 @@ df &lt;- tibble(
   k = sort(rep(1:4, 201)),
   x = rep(seq(0, 2, 0.01), 4),
   `function` = f(x),
-  `tagent` = rep(0, 201 * 4) 
+  `tangent` = rep(0, 201 * 4) 
 )
 
 # Newton-Raphson iteration
@@ -92,19 +92,21 @@ for (k in 1:4) {
 
 # Animation for the tangent line
 df %&gt;% 
-  mutate(`tangent` = unlist(map2(x, k, sl))) %&gt;% 
+  mutate(k = factor(as.character(k), levels = c(&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;)),
+         `tangent` = unlist(map2(x, k, sl))) %&gt;%
   gather(`function`, `tangent`, 
          key = &quot;plot&quot;, value = &quot;value&quot;) %&gt;% 
   ggplot(aes(x = x,
              y = value,
              colour = plot)) +
   geom_line() +
-  transition_time(k) +
+  transition_states(states = k, 
+                    transition_length = 0) +
   ease_aes(&#39;linear&#39;) +
-  labs(title = &#39;k: {frame_time}&#39;, 
-       x = &#39;x&#39;, 
-       y = &#39;f(x)&#39;,
-       caption = &quot;Nicolás Cuesta Quintero&quot;) </code></pre>
+  labs(title = &#39;Iteration: {closest_state}&#39;, #&#39;k: {frame_time}&#39;, 
+  x = &#39;x&#39;, 
+  y = &#39;f(x)&#39;,
+  caption = &quot;Nicolás Cuesta Quintero&quot;)</code></pre>
 <div class="figure"><span id="fig:newton"></span>
 <img src="/post/post_one_files/figure-html/newton-1.gif" alt="Newton-Raphson iteration."  />
 <p class="caption">

@@ -1,0 +1,146 @@
+---
+title: Tools
+description: Useful tools for asset allocation
+images: ["/images/sample.jpg"]
+---
+
+### Selecting Mutual Funds in Colombia
+
+*(Information provided here do not constitute any kind of financial/investment advice but is only an exercise for academic purposes)*
+
+A lot of friends and colleagues usually ask me what they should do with their savings and where to invest them. This is not an easy question from a technical point of view and the answer depends on your risk aversion degree, your investment horizon and how much you have to invest, among other important variables. For that reason, I decided to tackle this question using information of all of the Colombian mutual funds available for the general public, using [sifi data](https://sificcolombia.lvaindices.com/estadisticas/).
+
+I am not going to drive you through the specifics since it will require me to update this analysis monthly, which I will probably not be able to. However, I can give you the tools to do it yourself.
+
+#### Overiview
+
+Let's start considering the dominance plot for each category of investments. As you can see, the plot below allows you to see the relationship between risk and return for each category and segregate them by risk profile. You may want to use the tools plotly provides to highlight those near the efficient frontier.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(plotly)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+
+dataset <- 
+  map_dfr(str_subset(dir("../../static/sifi"), ".xlsx$"), 
+          function(i) {
+            df <- read_excel(str_c("../../static/sifi/", i))[, 1:9]
+            df[, 1] <- parse_date(df[, 1, drop = TRUE], 
+                                  format = "%Y-%m-%d")
+            df[, 2:9] <- map_dfc(df[, 2:9], 
+                                 function(i) as.character(i))
+            df[, 6:9] <- map_dfc(df[, 6:9], 
+                                 function(i) {
+                                   suppressWarnings(parse_double(i))
+                                 })
+            return(df)
+          }) %>% 
+  drop_na() 
+
+colnames(dataset) <- c("Date",
+                       "Manager",
+                       "Category",
+                       "Public",
+                       "Name",
+                       "InvestorsCount",
+                       "MarketValue",
+                       "NAV",
+                       "DailyReturn")
+risk_profile <- tribble(
+  ~Category,	~RiskProfile,
+  #--------#--------------#
+  "Fondo Accionario Internacional",	"Aggressive",
+  "Fondo Inmobiliario de Desarrollo Nacional",	"Aggressive",
+  "Fondo de Alto Rendimiento Nacional",	"Aggressive",
+  "Fondo Balanceado Mayor Riesgo Local",	"Aggressive",
+  "Otros Fondos Accionarios",	"Aggressive",
+  "Fondo Balanceado Mayor Riesgo Global",	"Aggressive",
+  "Fondo Accionario Nacional",	"Aggressive",
+  "Fondo Renta Fija Nacional Liquidez",	"Conservative",
+  "Fondo Renta Fija Nacional Corto Plazo",	"Conservative",
+  "Fondo Balanceado Menor Riesgo Global",	"Conservative",
+  "Fondo Balanceado Menor Riesgo Local",	"Conservative",
+  "Fondo Balanceado Moderado Local",	"Moderate",
+  "Otros Fondos",	"Moderate",
+  "Fondo de Activo de Crédito",	"Moderate",
+  "Fondo Inmobiliario de Renta Nacional",	"Moderate",
+  "Fondo Renta Fija Nacional Mediano Plazo",	"Moderate",
+  "Fondo de Renta Fija Internacional",	"Moderate",
+  "Fondo de Renta Fija Nacional de Largo Plazo",	"Moderate",
+  "Fondo de Renta Fija Nacional para Entidades Públicas",	"Moderate",
+  "Fondo Balanceado Moderado Global",	"Moderate"
+)
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+m <- dataset %>% 
+  filter(Category != "Otros Fondos",
+         Category != "Otros Fondos Accionarios",
+         Category != "Fondo Inmobiliario de Desarrollo Nacional",
+         Name != "ALIANZA RENTA FIJA MERCADOS EMERGENTES - Tipo A") %>% 
+  mutate(DailyReturn = (1 + DailyReturn / 100) ^ (1 / 365) - 1) %>% 
+  group_by(Category) %>% 
+  summarise(MeanReturn = round(mean(DailyReturn) * 252, 3),
+            Volatility = round(sd(DailyReturn) * sqrt(252), 3),
+            CV = round(Volatility / MeanReturn, 3)) %>% 
+  inner_join(risk_profile, 
+             by = c("Category")) %>% 
+  mutate(Category = str_remove(str_remove(Category, "Fondo "), "de ")) %>% 
+  arrange(CV) %>% 
+  highlight_key()
+
+p <- ggplot(data = m, 
+            aes(x = Volatility, 
+                y = MeanReturn,
+                color = RiskProfile)) + 
+  geom_point(position = "jitter") + 
+  theme(legend.position = "bottom")
+  
+
+gg <- highlight(ggplotly(p) %>%
+                  layout(
+                    legend = list(
+                      orientation = "h",
+                      y = -0.2
+                    )
+                  ), 
+                "plotly_selected")
+
+crosstalk::bscols(widths = c(12, NA),
+                  list(
+                    gg, 
+                    DT::datatable(m, width = "500px", 
+                                  options = list(
+                                    lengthMenu = c(1, 2, 5), 
+                                    pageLength = 5
+                                    )
+                    )
+                  )
+)
+
+
+  # mutate(Category = str_remove(str_remove(Category, "Fondo "), "de "),
+  #        MeanReturnT = str_c(100 * round(MeanReturn, 3), "%"),
+  #        VolatilityT = str_c(100 * round(Volatility, 3), "%")) %>% 
+  # mutate(Category = parse_factor(Category)) %>% 
+  # filter(MeanReturn > 0) %>% 
+  # ggplot(mapping = aes(x = Category, 
+  #                      y = MeanReturn,
+  #                      fill = MeanReturn)) +
+  # geom_text(mapping = aes(label = MeanReturnT),
+  #           nudge_y = 0.0075) +
+  # geom_bar(stat = "identity") +
+  # coord_flip() +
+  # theme(legend.position = "none",
+  #       axis.text.x = NULL) +
+  # labs(y = "Mean Daily Return (APR)")
+```
+
+<br>
+Since the Variance Coeffcient (CV) is defined as the volatility divided by the expected return, it is clear that you want the lower positive value for it. Categories that are at the top left of the plot dominate those at the bottom right. Among those categories dominating you may want to take an special look to those of your risk profile.
+
+You may be wondering now, I know what categories are the most adequate for me, but what specific funds/managers should I pick? I will provide the tools for solving this questions shortly, keep looking at my webpage! 
