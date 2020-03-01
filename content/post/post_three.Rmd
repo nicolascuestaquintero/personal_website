@@ -1,0 +1,189 @@
+---
+title: "Implied volatility for stock options"
+author: "Nicolas Cuesta Quintero"
+date: 2020-03-01T16:00:00-05:00
+categories: ["R"]
+tags: ["Options", "R", "Volatility"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
+
+Black-Scholes formula for derivatives pricing is at the cornerstone of modern financial theory. It holds at the foundation of Long-Term Capital Management (LCTM), a hedge-fund founded in 1994 under the management of Nobel prizes Robert Merton and Myron Scholes and whose bankruptcy in 1998 during the Rubble crisis almost lead to financial panic, enforcing Federal Reserve intervention. One of its most important applications is estimating implied volatility from options market prices, which works as a benchmark for derivatives pricing and as measure of market risk. In this post I want to drive you through the specifics of implied volatility calculation for stock options using numerical methods for solving non-linear equations. 
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+library(gganimate)
+library(transformr)
+```
+
+## The Black-Scholes/Merton formula
+
+An option gives its holder the possibility of buying (call) or selling (put) an underlying asset for a given price, called strike price, at an specific date in the future. On the other hand, the option writer is in the obligation of being the counterpart of the transaction. There are many types of options. For instance, European options can be exercised only at its maturity, while American options can be excercised at any time. The brightness of Fisher Black and Myron Scholes waproviding a model to price European options based on its main characteristics, as show in the following formulas. 
+
+For Call options:
+
+$$c = S_{0}N(d_{1})-Ke^{-r_{f}T}N(d_{2}).$$
+
+Here, $c$ represents the price of the call option, $S_{0}$ the spot price of the underlying asset, $K$ the strike price, $r_{f}$ the risk-free rate and $T$ the time to maturity. $d_{1}$ and $d_{2}$ are defined below. For Put options:
+
+$$p = Ke^{-r_{f}T}N(-d_{2})-S_{0}N(-d_{1}).$$
+
+Finally,
+
+$$d_{1}=\frac{log(K/S_{0})+(r_{f}+\sigma^{2}/2)}{\sigma\,\sqrt{T}}$$
+
+where $\sigma$ represents the volatility and
+
+$$d_{2}=d_{1}-\sigma\,\sqrt{T}.$$
+
+```{r}
+option_price <- function(S, K, rf, Mat, sigma, Exc) {
+  d1 <- (log(S/K) + (rf + 0.5*sigma^2)) / (sigma * sqrt(Mat))
+  d2 <- d1 - sigma * sqrt(Mat)
+  if (Exc == "Call") {
+    price <- S * pnorm(d1) - K * exp(-rf * Mat) * pnorm(d2)
+  } else {  # Put
+    price <- K * exp(-rf * Mat) * pnorm(-d2) - S * pnorm(-d1)
+  }
+  price
+} 
+
+# Example: OTM Call.
+option_price(3524, 3600, 0.045, 1/12, 0.3, "Call")
+```
+
+Notice that an option works as an insurance so its prime is relatively low compared to the spot price of its underlying asset. Also, the interpretation of these formulas is quite interesting. Consider the call option of the example before. Here, $N(d_{2})$ is the probability that the holder excercise its right at maturity in a risk-neutral world, so $KN(d_{2})$ is the expected outflow for the holder of the call option. Since we value options at a risk-neutral world, then $S_{T}=S_{0}e^{r_{f}T}$ , and the expected inflow of the holder would be $S_{0}e^{r_{f}T}N(d_{1})$. Therefore, the expected cash flow of the holder of the call option at its maturity is 
+
+$$S_{0}e^{r_{f}T}N(d_{1}) - KN(d_{2})$$
+
+You can move this to present value by multiplying times $e^{-r_{f}T}$ to get the option price,
+
+\begin{eqnarray*}
+c &=& e^{-r_{f}T} * (S_{0}e^{r_{f}T}N(d_{1}) - KN(d_{2})) \\
+  &=& S_{0}N(d_{1})-Ke^{-r_{f}T}N(d_{2}).
+\end{eqnarray*}
+
+## Implied volatility
+
+The implied volatility can be defined as the volatility that is implicitly used for market prices. Since this is the only variable we cannot observe empirically in financial markets but it is still necessary for pricing options, we must be able to isolate it from options market prices. However, notice from equations (1) and (2) that this might not be that simple, in fact, it is impossible to solve analytically so we need numerical methods. I will explain now the method I consider is the most appropiate for this problem and then use it for calculating the implied volatility. If you already now the details of the methods you can jump this subsection.
+
+### The bisection method
+
+Consider a smooth function $f:\mathbb{R}\rightarrow\mathbb{R}$ in the interval $\left[a,b\right]$, such that $f(a)f(b)>0$. With these conditions we can guarantee that there is at least one root of the function between $a$ and $b$. For instance, think about a decreasing function for which $f(a)>0$ and $f(b)<0$, then the function will go down from $f(a)$ to $f(b)$ passing through the root $f(\bar{x})=0$. Given these conditions, we can split the interval in two by finding its midpoint, $c=(a+b)/2$, to corner the root in a smaller interval. We have then two possibilities now: either the root is in $\left[a,c\right]$ or it is in $\left[c,b\right]$. We can use the same logic as before to check where is the root. Is it $f(a)f(c)<0$? Then, the root is in the former interval, otherwise is in the latter. Notice that we can foresee one of the issues with this method now, what if the function passess many times through the zero instead of constantly decreasing? 
+
+In this case we would have to shorten our intial interval guess. Let's now consider $f(x)=3x-e^{x}$ in the interval $[1,2]$ and make the first five iterations to see how it works, before we move back to our original implied volatility problem.
+
+```{r}
+## Code for animation. Jump straight to the next chunk
+## if you want to look at the method itself.
+
+# Example funciton
+fun <- function(x) 3 * x - exp(x)
+
+# Store iterations
+dataset <- tibble(k = vector("double"),
+                  name = vector("character"),
+                  x = vector("double"), 
+                  y = vector("double"))
+
+# Bisection iterations
+a <- 1; b <- 2
+for (k in 1:5) {
+  # Splits the interval
+  c <- (a + b) / 2
+  # Store iterations information
+  x <- c(a, b, c, seq(a, b, 0.001))
+  y <- c(0, 0, 0, fun(seq(a, b, 0.001)))
+  names <- c("a", "b", "c", rep("f", length(x) - 3))
+  dataset %<>% bind_rows(
+    tibble(
+      k = k,
+      name = names,
+      x = x,
+      y = y
+    )
+  )
+  # Check conditions for next step
+  if (fun(a) * fun(c) < 0) {
+    b <- c
+  } else {
+    a <- c
+  }
+}
+
+dataset %<>% 
+  mutate(k = factor(k, levels = c("1", "2", "3", "4", "5")))
+
+ggplot(dataset) +
+  geom_point(dataset %>% filter(name %in% c("a", "b")),
+             mapping = aes(x, y), colour = "red") +
+  geom_text(dataset %>% filter(name %in% c("a", "b")),
+            mapping = aes(x, y, label = name), 
+            colour = "red", nudge_y = 0.1) +
+  geom_point(dataset %>% filter(name == "c"),
+             mapping = aes(x, y), colour = "green") +
+  geom_text(dataset %>% filter(name == "c"),
+            mapping = aes(x, y, label = name), 
+            colour = "green", nudge_y = 0.1) +
+  geom_line(dataset %>% filter(name == "f"),
+             mapping = aes(x, y)) +
+  transition_states(states = k,
+                    transition_length = 0) +
+  ease_aes('linear') +
+  labs(title = 'Iteration: {closest_state}',
+  x = 'x', y = 'f(x)',
+  caption = "Nicolás Cuesta Quintero")
+
+```
+
+We can notice why this method could be slower than many others, such as the Newton-Raphson method used for calculating the IRR in a previous post: the first guess was really good, but starting the second iteration the method moves away from the root and has to spend many other iterations fixing this problem. However, I personally believe bisection is more appropiate for this problem since we can easily find an interval for volatility. Moreover, we can create a general function that works for any interval and that satisfies the mathematical conditions of the method, so we can use it as many times as necessary for our implied volatility problem. 
+
+```{r}
+# Bisection method function
+bisection <- function(a, b, f, n = 100, tol = 1e-04, show = FALSE) {
+  if (f(a) * f(b) > 0) return("Method conditions not satisfied.")
+  for (k in 1:n) {
+    c <- (a + b) / 2
+    if (show) cat("k: ", k, "c:", c, "f: ", f(c), "\n")
+    if (f(c) == 0 || ((b - a) / 2) < tol) return(c)
+    if (f(a) * f(c) < 0) {
+      b <- c
+    } else {
+      a <- c
+    }
+  }
+  cat("No solution found after ", n, " iterations.")
+}
+
+# Example!
+bisection(a = 1, b = 2, f = fun, show = TRUE)
+```
+
+It takes much more than 5 iterations to find the root of our example problem using bisection!
+
+### Calculating an option implied volatility
+
+Consider the same conditions of the option of the example before. To apply the bisection method we must find a function $f(\sigma)$ so we can isolate $\sigma$ numerically. Black-Scholes made this work easy for us and we can easily fix equation (1) to get:
+
+$$f(\sigma) = S_{0}N(d_{1}(\sigma))-Ke^{-r_{f}T}N(d_{2}(\sigma)) -c = 0.$$
+
+
+```{r}
+bisection(a = 0.0, b = 0.5,
+       f = function(x) {
+         option_price(3524, 3600, 0.045, 1/12, x, "Call") - 44.40367
+       }
+)
+```
+
+This result is approximately the 30% used in the first example to calculate the option price.
+
+## References
+
+[1] Hull, J. (2009). *Options, futures and other derivatives*. Upper Saddle River, NJ. Prentice Hall.

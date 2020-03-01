@@ -7,10 +7,28 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>© Nicolás Cuesta Quintero</copyright>
-    <lastBuildDate>Sun, 23 Feb 2020 19:00:00 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 21 Mar 2020 21:13:14 -0500</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>An OO framework for Asset Valuation</title>
+      <link>/post/post_four/</link>
+      <pubDate>Sat, 21 Mar 2020 21:13:14 -0500</pubDate>
+      
+      <guid>/post/post_four/</guid>
+      <description>Create a class asset with subclasses option/stock/bond and a valuation generic.</description>
+    </item>
+    
+    <item>
+      <title>Implied volatility for stock options</title>
+      <link>/post/post_three/</link>
+      <pubDate>Sun, 01 Mar 2020 16:00:00 -0500</pubDate>
+      
+      <guid>/post/post_three/</guid>
+      <description>Black-Scholes formula for derivatives pricing is at the cornerstone of modern financial theory. It holds at the foundation of Long-Term Capital Management (LCTM), a hedge-fund founded in 1994 under the management of Nobel prizes Robert Merton and Myron Scholes and whose bankruptcy in 1998 during the Rubble crisis almost lead to financial panic, enforcing Federal Reserve intervention. One of its most important applications is estimating implied volatility from options market prices, which works as a benchmark for derivatives pricing and as measure of market risk.</description>
+    </item>
     
     <item>
       <title>Custom visualizations in Power BI</title>
