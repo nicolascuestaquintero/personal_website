@@ -1,9 +1,337 @@
 ---
 title: "An OO framework for Asset Valuation"
 author: "Nicolas Cuesta Quintero"
-date: 2020-03-21T21:13:14-05:00
+date: 2020-04-13T21:23:14-05:00
 categories: ["R"]
-tags: ["S4", "rstats", "Valuation"]
+tags: ["S4", "rstats", "pricing"]
 ---
 
-Create a class asset with subclasses option/stock/bond and a valuation generic.
+Usually when you price assets in a free source language such as R or Python, you get overwhelmed by tons of functions and formulas needed to price different types of assets, leaving you with huge pieces of code that seem to be disorganized and unrelated, but are meant to just one same purpose: asset pricing. In this post I drive you through a basic object oriented (OO) framework to find fair market values across different types of assets using S4. This paradigm works with the same underlying ideas of S3, but is much stricter when creating generics and provides both multiple inheritance and dispatch.    
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(methods)
+library(tidyverse)
+library(lubridate)
+library(plotly)
+```
+
+## Asset pricing basics
+
+An asset can be defined as a sequence of future cash flows, $\{CF_{t}\}_{t=1}^{n}$. Therefore, its price must be defined as the sum of all the cash flows that the asset will return in the future. However, markets are uncertain and prices are not constant throughout time. Hence, we must adjust cash flows to account for time value of money, i.e.
+
+$$P = \sum_{t=0}^{n}{\frac{CF_{t}}{(1+r)^{t}}},$$
+
+where $r$ is the interest rate, $P$ is the fair market value, $t$ represents the time at which each cash flow will be paid and $n$ is the number of cash flows. Consider, for instance, the following asset:   
+
+```{r}
+cf <- tribble(
+  ~Date, ~Value,
+  as.Date("2020-12-31"), 1000,   # Y1  
+  as.Date("2021-12-31"), 1000,   # Y2
+  as.Date("2022-12-31"), 1000,   # Y3
+  as.Date("2023-12-31"), 1000,   # Y4  
+  as.Date("2024-12-31"), 1000,   # Y5
+  as.Date("2024-12-31"), 10000   # Capitalization Year
+)
+```
+
+In this case we would need a more general formula that allows us to count the exact amount of days that are left to the next cash flow. If we denote 2020-12-31 by $d_{0}$, the next relevant day would be denoted by $d_{1}$ such that $d_{1}-d_{0}=365$, which is the number of days between both dates. The fair market value for this asset at a $5\%$ interest rate as of 2019-12-31 is
+
+\begin{eqnarray*}
+P &=& \sum_{t=1}^{n}{\frac{CF_{t}}{(1+r)^{(d_{t}-d_{0})/365}}}, \\
+  &=& \frac{1000}{1.05^{366/365}} + \frac{1000}{1.05^{731/365}} + \frac{1000}{1.05^{1096/365}} \\ 
+  &+& \frac{1000}{1.05^{1461/365}} +  \frac{11000}{1.05^{1826/365}} = \$ 12,161.96
+\end{eqnarray*}
+
+```{r}
+# Present value formula
+vp <- function(cf, r, g = 0, value_date = Sys.Date(), capitalize = FALSE) {
+  # Organize cash flow data frame
+  require(dplyr)
+  cf <- cf %>% 
+    filter(Date >= value_date) %>%  
+    group_by(Date) %>% 
+    summarize(Value = sum(Value)) %>% 
+    arrange(Date)
+  # In case there is a capitalization to be calculated
+  if (capitalize) {
+    require(lubridate)
+    if (g <= 0) stop("Invalid capitalization rate.")
+    last <- nrow(cf)
+    cf[last, 1] <- cf[last, 1] %m+% year(-1)    
+    cf[last, 2] <- cf[last, 2] / g
+  }
+  # Present value formula itself
+  days <- as.numeric(cf$Date - value_date)
+  df <- (1 + r) ^ (- days / 365)
+  return(sum(cf$Value * df))
+}
+
+# Example!
+vp(cf, r = 0.05, value_date = as.Date("2019-12-31"))
+```
+
+Notice that this function has an special feature that was not considered in previous formulas: it allows you to calculate an asset price using a last period inflow of capitalization, to account for a future sale of the asset or just a perpetuity of long-term cash flows not forecasted yet. However, you have to be very careful because the function only receive APRs and the terminal year cash flow would be brought at least one year to the present.
+
+In this post I will create a very simple software for asset pricing including stocks, bonds and options. However, notice that the previous function opens the door to value any asset for which you know its stream of future cash flows and you are aware of the discount rate and the capitalization rate you want to use.
+
+## S4 model for asset pricing
+
+### 'Architecture'
+
+In S4 you can create objects generators for a class (recall that a class is like a template that defines the behavior of an object). What we want to do is to create a class for assets in general and then subclasses (that inherits from this general one) for each particular asset type. But before, let us create a generic function for fair market value. Whence we define a generic we are not creating a function that will value assets itself, but is going to look for the correct method to value an asset given its class. For instance, if I call *FMV(Stock_x)*, the generic will go for the correct method to value stocks, that is different from the one to value bonds or options.
+
+
+```{r}
+setGeneric(name = "FMV", function(x,
+                                  r,
+                                  g = 0,
+                                  date = Sys.Date(),
+                                  method = "DCF",
+                                  capitalize = FALSE) {
+  if (!is.numeric(r) || length(r) != 1) stop("Invalid discount rate.")
+  standardGeneric("FMV")
+})
+```
+
+It is important to mention that the methods that we are about to create will value discounting future cash flows by default (DCF), as shown earlier in this post. However, since asset types may have special methodologies for their valuation, the asset pricing method can be specified too. This generic is not working yet because we have not defined any method for finding asset prices. To do that, we have to create the general asset class (see below). Then, we are going to create subclasses that correspond to each asset type and their corresponding methods to find the fair market value. 
+
+```{r}
+setClass(Class = "Asset",
+         slots = c(        
+           #assetID = "character",
+           #position = "integer"
+           name = "character"
+         )
+)
+```
+
+### Stocks Valuation
+
+Stocks are probably the most famous asset type in the market since many people see them as a road to riches and forget their true meaning: they represent ownership over the equity of a company. To value a stock you can forecast the future cash flows (per share) of the company and bring them to present value, as per the examples above, or you can get a fast approximation of its price by using Gordon-Shapiro model i.e. given next period (year) dividend per share forecast, a discount rate $r$ and a growth rate for the dividends $g$, the price of the stock is given by the perpetuity
+
+$$P=\frac{Div_{1}}{r-g}.$$
+
+```{r}
+# Define Stock class that inherits from Asset class.
+setClass(Class = "Stock",
+         contains = "Asset",
+         slots = c(               # Examples
+           shares = "numeric",    # 100L
+           dividend = "numeric",  # 250000
+           cf = "data.frame"
+         )
+)
+
+# Object generator (function) of objects class stock.
+stocks <- function(dividend = NULL, 
+                   cf = NULL, 
+                   shares = 1, 
+                   name = NA_character_) {
+  # Check that inputs make sense.
+  if (length(dividend) != 1) stop("Dividend must be of length 1.")
+  if (is.null(dividend) & is.null(cf)) warning("No data to price the asset.")
+  if (!is.data.frame(cf)) cf <- data.frame(Date = Sys.Date(), Value = NA_real_)
+  # Create the object!
+  new(
+    Class = "Stock",
+    name = name,
+    shares = shares,
+    dividend = dividend,
+    cf = cf
+  )
+}
+
+# Method called by the generic when FMV is applied over stocks.
+setMethod("FMV", "Stock", 
+          function(x, r, g, date, method, capitalize) {
+  if (method == "Gordon-Shapiro") {
+    if (!is.numeric(x@dividend) && !is.na(x@dividend)) {
+      stop("Invalid dividend.")
+    }
+    return(x@dividend / (r - g))
+  } else if (method == "DCF") {
+    return(vp(x@cf, r, g, date, capitalize))
+  } else {
+    stop("Method not available for pricing stocks.")
+  }
+})
+
+# Example!
+stock_x <- stocks(name = "Not a road to riches Inc.",
+                  shares = 1, dividend = 100, cf = cf)
+FMV(x = stock_x, r = 0.05)
+```
+
+Where you able to identify why is this valuation higher than the one in the first example? The reason is because I am letting the method take the default valuation date from de generic, which is Sys.Date() (in this case, 2020-04-12). Hence, the cash flows are earlier in the timeline so the asset fair market value is higher.
+
+### Bonds Valuation: 
+
+Bonds are very interesting because with the correct input you can create the cash flow yourself, with no need of knowing the future as in the case of stocks. I will develop a very simplified example to make my point, although the method will allow you to use an imported cash flow as before.
+
+```{r}
+# Define Bond class that inherits from Asset class.
+setClass(Class = "Bond",
+         contains = "Asset",
+         slots = c(                  # Examples
+           bond_type = "character",  # Zero, Bullet
+           nominal = "numeric",      # 100000000
+           rate_type = "character",  # Floating, Fixed
+           index = "character",      # Libor, NA
+           spread = "numeric",       # 0.035, 0.065
+           periodicity = "numeric",  # 1 (yearly), 4 (quaterly)...
+           maturity = "Date",        # "2030-05-05"
+           calendar = "character",   # "360/360", "365/Actual"
+           cf = "data.frame"
+         )
+)
+
+# Object generator (function) of objects class bond.
+bonds <- function(name = NA_character_,
+                  bond_type = "Bullet",
+                  nominal = 100,
+                  rate_type = "Fixed",
+                  index = NA_character_,
+                  spread = 0.0,
+                  periodicity = 1L,
+                  calendar = "Actual/360",
+                  maturity = Sys.Date(),
+                  cf = NULL) {
+  if (!is.data.frame(cf)) {
+    cf <- data.frame(Date = Sys.Date(), Value = NA_real_)
+  }
+  new(
+    Class = "Bond",
+    name = name,
+    bond_type = bond_type,
+    nominal = nominal,
+    rate_type = rate_type,
+    index = index,
+    spread = spread,
+    periodicity = periodicity,
+    maturity = maturity,
+    calendar = calendar,
+    cf = cf
+  )
+}
+
+# Method called by the generic when FMV is applied over bonds.
+setMethod("FMV", "Bond", function(x, r, g, date, method) {
+  if (method == "Bullet") {
+    # Only 360/Actual
+    # Calculate coupon rate
+    if (x@rate_type == "Fixed") {
+      coupon <- x@nominal * (x@spread / x@periodicity)
+    } else {
+      stop("Left as exercise!")
+    }
+    # Generate cash flow
+    ref_date <- x@maturity
+    bi_cf <- tibble(Date = ref_date, Value = x@nominal + coupon)
+    #browser()
+    while (ref_date >= date) {
+      ref_date <- ref_date %m+% months(-(12 / x@periodicity))
+      bi_cf <- bi_cf %>% 
+        bind_rows(
+          tibble(Date = ref_date, Value = coupon)
+        )
+    }
+    return(vp(bi_cf, r, g, date))
+  } else if (method == "DCF") {
+    return(vp(x@cf, r, g, date))
+  } else {
+    stop("Method not available for pricing bonds.")
+  }
+})
+
+# Example! 
+yom <- bonds(rate_type = "Fixed",
+             spread = 0.05, 
+             nominal = 1000,
+             periodicity = 2,
+             maturity = Sys.Date() + 190
+)
+FMV(yom, r = 0.05, method = "Bullet")
+```
+
+Bond cash flow must be definitively improved but this is meant to be a quick example.
+
+### Options
+
+A derivative is a very special kind of asset because its value depends on the behavior of the underlying asset, so the DCF method will not be useful anymore. For the sake of simplicity, I will only deal with European options using Black-Scholes formula. For more details in this formula you can read my previous post on Implicit Volatility calculation (I will be posting about more advanced methods for pricing options though). 
+
+```{r message=FALSE, warning=FALSE}
+# Define Options class that inherits from Asset class.
+setClass(Class = "Option",
+         contains = "Asset",
+         slots = c(                  # Examples
+           spot = "numeric",         # 110
+           strike = "numeric",       # 100
+           volatility = "numeric",   # 0.15
+           expiration = "Date",      # "2020-05-05"
+           kind = "character",       # "European" 
+           type = "character"        # "Call"
+         )
+)
+
+# Object generator (function) of objects class option,
+# be careful to not overwrite base function `options`.
+fin_options <- function(spot, 
+                        strike, 
+                        volatility, 
+                        expiration, 
+                        name = NA_character_,
+                        kind = "European", 
+                        type = "Call") {
+  # Check that inputs make sense.
+  if (length(spot) != 1) stop("Underlying spot price must be of length 1.")
+  if (length(strike) != 1) stop("Option strike price must be of length 1.")
+  if (length(volatility) != 1) stop("Underlying volatility must be of length 1.")
+  if (is.na(as.Date(expiration))) stop("Expiration date must be yyyy-mm-dd.")
+  if (!(kind %in% c("European"))) warning("Won't be able to price the option.")
+  if (!(type %in% c("Call", "Put"))) warning("Won't be able to price the option.")
+  # Create the object!
+  new(
+    Class = "Option",
+    name = name,
+    spot = spot,
+    strike = strike,
+    volatility = volatility,
+    expiration = expiration,
+    kind = kind,
+    type = type
+  )
+}
+
+# Method called by the generic when FMV is applied over options.
+setMethod("FMV", "Option", function(x, r, g, date, method) {
+  if (x@kind == "European" && method == "BSM") {
+    spot <- x@spot; strike <- x@strike; 
+    sigma <- x@volatility; ed <- as.Date(x@expiration) 
+    ttm <- as.numeric(ed - date) / 252
+    d1 <- (log(spot/strike)+(r-g+0.5*sigma^2)*ttm)/(sigma*sqrt(ttm))
+    d2 <- d1 - sigma * sqrt(ttm)
+    if (x@type == "Call") {
+      price <- spot*exp(-g*ttm)*pnorm(d1)-strike*exp(-r*ttm)*pnorm(d2)
+    } else {  # Put
+      price <- strike*exp(-r * ttm)*pnorm(-d2)-spot*exp(-g*ttm)*pnorm(-d1)
+    }
+    return(price)
+  } else {
+    stop("Method not available for pricing options.")
+  }
+})
+
+# Example!
+option_x <- fin_options(spot = 930, 
+                        strike = 900, 
+                        volatility = 0.2, 
+                        expiration = Sys.Date() + 42)
+FMV(x = option_x, r = 0.08, g = 0.03, method = "BSM")
+```
+
+The big difference between this method and the previous ones is that DCF is not a possibility anymore due to the nature of the asset. However, you can notice that the structure of the code is exactly the same: now you have a framework that allows you to make valuations in an organized manner that also lets you put the common things among assets in the same place and the specifics of each where they belong.
+
+

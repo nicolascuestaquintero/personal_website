@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>© Nicolás Cuesta Quintero</copyright>
-    <lastBuildDate>Sat, 21 Mar 2020 21:13:14 -0500</lastBuildDate>
+    <lastBuildDate>Mon, 13 Apr 2020 21:23:14 -0500</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
@@ -15,10 +15,10 @@
     <item>
       <title>An OO framework for Asset Valuation</title>
       <link>/post/post_four/</link>
-      <pubDate>Sat, 21 Mar 2020 21:13:14 -0500</pubDate>
+      <pubDate>Mon, 13 Apr 2020 21:23:14 -0500</pubDate>
       
       <guid>/post/post_four/</guid>
-      <description>Create a class asset with subclasses option/stock/bond and a valuation generic.</description>
+      <description>Usually when you price assets in a free source language such as R or Python, you get overwhelmed by tons of functions and formulas needed to price different types of assets, leaving you with huge pieces of code that seem to be disorganized and unrelated, but are meant to just one same purpose: asset pricing. In this post I drive you through a basic object oriented (OO) framework to find fair market values across different types of assets using S4.</description>
     </item>
     
     <item>
