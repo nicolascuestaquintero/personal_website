@@ -11,6 +11,8 @@ Financial Engineer and candidate to a master's in computational and scientific m
 ### Experience
 &nbsp;
 
+* Senior Power BI Developer - RealPage Inc.
+
 * Business Analyst - RealPage Inc.
 
 * Junior Business Analyst - RealPage Inc.
