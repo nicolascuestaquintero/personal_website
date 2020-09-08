@@ -7,10 +7,28 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>© Nicolás Cuesta Quintero</copyright>
-    <lastBuildDate>Mon, 13 Apr 2020 21:23:14 -0500</lastBuildDate>
+    <lastBuildDate>Thu, 01 Oct 2020 20:00:00 -0500</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>General Binomial Models and the Cox-Ross-Rubenstein Model</title>
+      <link>/post/post_six/</link>
+      <pubDate>Thu, 01 Oct 2020 20:00:00 -0500</pubDate>
+      
+      <guid>/post/post_six/</guid>
+      <description>Pricing derivative securities has been one of the main financial problems forboth academics and practitioners. This is the price to pay for options representinginsurance claims, interest or exchange rate hedging swaps, forward prices of commodities oreven stock options for top managerial position salaries. Usually the binomial model forpricing derivatives at Undergraduate level is used to show how to price options by takingthe expected present value of future claims over risk-neutral probabilities.</description>
+    </item>
+    
+    <item>
+      <title>Linear regression: behind the scenes</title>
+      <link>/post/post_five/</link>
+      <pubDate>Mon, 07 Sep 2020 21:00:00 -0500</pubDate>
+      
+      <guid>/post/post_five/</guid>
+      <description>Linear regression is one of the most powerful statistical tools currently used in the financial industry and in the data world as well. It has been the battle horse of econometricians since the very beginning and most of empirical finance is based on its methods and rely on its hypothesis. Moreover, current data scientists use it on a daily basis as one of its most important methods for supervised learning.</description>
+    </item>
     
     <item>
       <title>An OO framework for Asset Valuation</title>

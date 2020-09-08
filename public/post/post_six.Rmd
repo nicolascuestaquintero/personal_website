@@ -1,0 +1,67 @@
+---
+title: "General Binomial Models and the Cox-Ross-Rubenstein Model"
+author: "Nicolas Cuesta Quintero"
+date: 2020-10-01T20:00:00-05:00
+categories: ["R"]
+tags: ["Options pricing", "trading", "quantfinance"]
+---
+
+Pricing derivative securities has been one of the main financial problems for
+both academics and practitioners. This is the price to pay for options representing
+insurance claims, interest or exchange rate hedging swaps, forward prices of commodities or 
+even stock options for top managerial position salaries. Usually the binomial model for
+pricing derivatives at Undergraduate level is used to show how to price options by taking
+the expected present value of future claims over risk-neutral probabilities. The aim of this 
+post is to show a generalized version that allows to use binomial models to price any 
+kind of derivative, the importance of the No Arbitrage Principle and its equivalence
+to the risk-neutral probability measure (martingale), to conclude with the 
+Cox-Ross-Rubinstein model for European call options. You can expect to find a summary of
+the main theory behind these concepts and functions to make this practical knowledge in R.
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+#library(DiagrammeR)
+library(vtree)
+```
+
+```{r}
+vtree(FakeData, "Category Group", pngknit = FALSE)
+```
+
+
+## Single-step asset pricing models
+
+Let me exemplify the main point with a single-step model of a European Call option.
+
+### European Call Options
+
+### No Arbitrage Principle
+
+### Risk-neutral probability measures
+
+## The binomial model
+
+```{r}
+dvt_call <- function(s) max(s - 105, 0)
+
+# path-independent
+dvt_price <- function(h, s, u, d, r, N) {
+  q <- (r - d) / (u - d)
+  scenarios <- choose(N, 0:N) * q ^ (0:N) * (1 - q) ^ (N:0) * sapply(
+    s * (1 + u) ^ (0:N) * (1 + d) ^ (N:0), h)
+  sum(scenarios) * (1 + r) ^ (-N)
+}
+
+dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)
+```
+https://rich-iannone.github.io/DiagrammeR/#features
+
+
+
+## The Cox-Ross-Rubenstein model
+
+## References
+
+[1] Capiński, M., & Kopp, E. (2012). *Discrete models of financial markets* (Vol. 1). Cambridge University Press.

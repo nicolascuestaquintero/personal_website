@@ -1,0 +1,68 @@
+---
+title: "General Binomial Models and the Cox-Ross-Rubenstein Model"
+author: "Nicolas Cuesta Quintero"
+date: 2020-10-01T20:00:00-05:00
+categories: ["R"]
+tags: ["Options pricing", "trading", "quantfinance"]
+---
+
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/viz/viz.js"></script>
+<link href="/rmarkdown-libs/DiagrammeR-styles/styles.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/grViz-binding/grViz.js"></script>
+
+
+<p>Pricing derivative securities has been one of the main financial problems for
+both academics and practitioners. This is the price to pay for options representing
+insurance claims, interest or exchange rate hedging swaps, forward prices of commodities or
+even stock options for top managerial position salaries. Usually the binomial model for
+pricing derivatives at Undergraduate level is used to show how to price options by taking
+the expected present value of future claims over risk-neutral probabilities. The aim of this
+post is to show a generalized version that allows to use binomial models to price any
+kind of derivative, the importance of the No Arbitrage Principle and its equivalence
+to the risk-neutral probability measure (martingale), to conclude with the
+Cox-Ross-Rubinstein model for European call options. You can expect to find a summary of
+the main theory behind these concepts and functions to make this practical knowledge in R.</p>
+<p>We will use the following libraries:</p>
+<pre class="r"><code>library(tidyverse)
+#library(DiagrammeR)
+library(vtree)</code></pre>
+<pre class="r"><code>vtree(FakeData, &quot;Category Group&quot;, pngknit = FALSE)</code></pre>
+<div id="htmlwidget-1" style="width:672px;height:480px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"diagram":"digraph vtree {\ngraph [layout = dot, compound=true, nodesep=0.1, ranksep=0.5, fontsize=12]\nnode [fontname = Helvetica, fontcolor = black,shape = rectangle, color = black,margin=0.1]\nrankdir=LR;\nNode_L0[style=invisible]\nNode_L1[label=<<FONT POINT-SIZE=\"18\"><FONT COLOR=\"#DE2D26\"><B>Category  <\/B><\/FONT><\/FONT><BR/>> shape=none margin=0]\nNode_L2[label=<<FONT POINT-SIZE=\"18\"><FONT COLOR=\"#3182BD\"><B>Group  <\/B><\/FONT><\/FONT><BR/>> shape=none margin=0]\n\nedge[style=invis];\nNode_L0->Node_L1->Node_L2\n\nedge[style=solid]\nNode_1->Node_2 Node_1->Node_3 Node_1->Node_4\nNode_2->Node_5 Node_2->Node_6\nNode_3->Node_7 Node_3->Node_8\nNode_4->Node_9 Node_4->Node_10\n\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_2[label=<single<BR/>26 (57%)> color=black style=\"rounded,filled\" fillcolor=<#FEE0D2>  ]\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_3[label=<double<BR/>6 (13%)> color=black style=\"rounded,filled\" fillcolor=<#FC9272>  ]\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_4[label=<triple<BR/>14 (30%)> color=black style=\"rounded,filled\" fillcolor=<#DE2D26>  ]\nNode_5[label=<A<BR/>14 (54%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_6[label=<B<BR/>12 (46%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\nNode_7[label=<A<BR/>2 (33%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_8[label=<B<BR/>4 (67%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\nNode_9[label=<A<BR/>8 (57%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_10[label=<B<BR/>6 (43%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\n\n}\n","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<div id="single-step-asset-pricing-models" class="section level2">
+<h2>Single-step asset pricing models</h2>
+<p>Let me exemplify the main point with a single-step model of a European Call option.</p>
+<div id="european-call-options" class="section level3">
+<h3>European Call Options</h3>
+</div>
+<div id="no-arbitrage-principle" class="section level3">
+<h3>No Arbitrage Principle</h3>
+</div>
+<div id="risk-neutral-probability-measures" class="section level3">
+<h3>Risk-neutral probability measures</h3>
+</div>
+</div>
+<div id="the-binomial-model" class="section level2">
+<h2>The binomial model</h2>
+<pre class="r"><code>dvt_call &lt;- function(s) max(s - 105, 0)
+
+# path-independent
+dvt_price &lt;- function(h, s, u, d, r, N) {
+  q &lt;- (r - d) / (u - d)
+  scenarios &lt;- choose(N, 0:N) * q ^ (0:N) * (1 - q) ^ (N:0) * sapply(
+    s * (1 + u) ^ (0:N) * (1 + d) ^ (N:0), h)
+  sum(scenarios) * (1 + r) ^ (-N)
+}
+
+dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)</code></pre>
+<pre><code>## [1] 23.30745</code></pre>
+<p><a href="https://rich-iannone.github.io/DiagrammeR/#features" class="uri">https://rich-iannone.github.io/DiagrammeR/#features</a></p>
+</div>
+<div id="the-cox-ross-rubenstein-model" class="section level2">
+<h2>The Cox-Ross-Rubenstein model</h2>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>[1] Capiński, M., &amp; Kopp, E. (2012). <em>Discrete models of financial markets</em> (Vol. 1). Cambridge University Press.</p>
+</div>

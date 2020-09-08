@@ -3,21 +3,35 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/post/post_four/</loc>
-    <lastmod>2020-04-13T21:23:14-05:00</lastmod>
+    <loc>/post/post_six/</loc>
+    <lastmod>2020-10-01T20:00:00-05:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-04-13T21:23:14-05:00</lastmod>
+    <lastmod>2020-10-01T20:00:00-05:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
+    <lastmod>2020-10-01T20:00:00-05:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/post/post_five/</loc>
+    <lastmod>2020-09-07T21:00:00-05:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/post/post_four/</loc>
     <lastmod>2020-04-13T21:23:14-05:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

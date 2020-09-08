@@ -1,0 +1,527 @@
+---
+title: "Linear regression: behind the scenes"
+author: "Nicolas Cuesta Quintero"
+date: 2020-09-07T21:00:00-05:00
+categories: ["R"]
+tags: ["machine learning", "rstats", "steepest descent", "conjugate gradiente"]
+---
+
+Linear regression is one of the most powerful statistical tools currently used in the financial industry and in the data world as well. It has been the battle horse of econometricians since the very beginning and most of empirical finance is based on its methods and rely on its hypothesis. Moreover, current data scientists use it on a daily basis as one of its most important methods for supervised learning. In fact, there are tons of softwares that let you run the regression and find the (ordinary) least square parameters for your proposed equation, but have you ever wonder what is the code that allows you find the parameters doing behind scenes? Any time you call the function *lm* in R you end up with an equation that make predictions of any variable of interest. What methods can be used for this purpose and how to use some of them is the main point of this post.
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(plotly)
+```
+
+Consider the following problem: you have the *iris* data set and you want to explore whether the width of the sepal of an iris flower explains to some degree its length. I am not a biologist, but I am confident that there are plenty techniques to address a problem like this one; however, from an statistical point of view, doing a linear regressions seems like a straightforward way to solve this puzzle. We can proceed the following way:
+
+```{r}
+lm(Sepal.Length ~ Sepal.Width, data = iris)
+```
+
+Notice that you were able to find the equation 
+
+$$\hat{L}=6.5262-0.2234\,W$$
+
+almost immediately, where $L$ stands for the sepal length and $W$ for its width. Let's get hands on and explore a little bit more where are these numbers coming from.
+
+## Linear algebra and the least squares problem
+
+Consider a matrix $X$ of $m\times n$ entries where you collect all the data you know about the independent variables of your problem. In our test case, that would be a $150\times 2$ matrix with the first column of 1's (intercept) and the second column with the Sepal.Width data from iris. To completely set the problem you need an $m\times 1$ vector, $y$, with the observations for the sepal length and a parameters vector $\theta$ of dimensions $n\times 1$. The main goal is to find the values of $\theta_{i}$ for $i=1,2,\dots,n$ that solve
+
+$$X\theta=y\quad (1).$$
+
+If $m<n$ there are infinite solutions, but this is usually not the case in an empirical finance study or a machine learning problem. If $m=n$ and matrix $X$ is non-singular, i.e. $det(X)\neq 0$, then there is a unique solution and you certainly know which specific case among all imaginable cases is the real solution of your problem. For instance, in Microeconomics when a rational agent wants to decide among two goods given a budget constraint, there is (usually) a unique combination of goods that maximize his benefit. There are multiple methods to solve the system of linear equations in $(1)$ that can be classified according to the way you approach to the solution: the direct methods that find the exact solution by decomposing $X$ on simpler matrices, or the iterative methods that use recursions to approximate the exact solution until an accepted threshold of error is achieved.
+
+
+- Direct methods
+  * Gaussian elimination (LU decomposition)
+  * Orthogonal decomposition (QR decomposition)
+  * Cholesky decomposition (LDL* decomposition)
+  * Cramer's rule
+  
+- Iterative Methods
+
+  - Stationary methods
+  
+    * The Jacobi method
+    * The Gauss-Seidel method
+    * Successive Overrelaxation (SOR)
+    
+  - Non-stationary methods
+  
+    * **Steepest Descent**
+    * **Conjugate gradient**
+
+Now, what if $X$ is singular? Moreover, what if $m>n$. Well, there is no unique solution in these cases and we have to approach the problem differently.
+
+Think of the following: if $\theta$ is an approximate solution of the problem, then we can minimize the errors on a $p-norm$ by minimizing the objective function
+
+$$J_{p}(\theta)=\frac{1}{p}||X\theta-y||_{p}^{p}$$
+
+On the one hand, which $p-norm$ to use is beyond the scope of this post. However, it is worth to mention that norm $1$ is a good one to avoid the noisy effect of outliers, while norm $2$, the Euclidean norm, is the one usually used since the mean square error allow for a better fit of data to the regression equation. On the other hand, it can be shown that minimize $J_{2}$ is equivalent to solve the normal equations
+
+$$X^{T}X\theta=X^{T}y,$$
+
+where $A=X^{T}X$ is a symmetric positive-definite matrix and we denote $b=X^{T}y$ so that the problem can be written as
+
+$$A\theta =b\quad (2).$$
+
+We are now in a similar position to the one when we started. We know that $A$ is a symmetric $n\times n$ positive-definite square matrix. If $A$ is non-singular we can solve our problem using one of the methods listed before. Nevertheless, if $A$ is singular, we have three alternatives:
+
+* Use the pseudo-inverse instead of the normal equations, i.e. $\theta=X^{+}y$.
+* Use a regularization, such as Tickhonov, to solve a problem of the form $(X^{T}X+\lambda I)\theta=X^{T}y$ for a relatively small $\lambda\in\mathbb{R}$.
+* Change the objective function using a relatively small $\lambda\in\mathbb{R}$ to minimize $J_{2}(\theta)=\frac{1}{2}||X\theta-b||_{2}^{2}+\lambda||x||_{2}^{2}$.
+
+The rest of this post will focus on solving $(2)$ when $A$ is non-singular using steepest descent and conjugate gradient methods. However, notice that this problem can be tackled from multiple other methods. One of the most famous is the QR orthogonalization due to the fast pace of convergence and, by the way, it is the one used by R. However, the two methods explained here are also relatively quick and are useful for other optimization problems. I will try to focus on how the code works rather than the mathematical details and provide the R code for these methods.
+
+## Steepest descent methods
+
+Consider the objective function
+
+$$J(\theta)=\frac{1}{2}||X\theta-b||^{2}.$$
+
+It can be shown that this represents a paraboloid of revolution with a unique global minimum. Let's say we start our algorithm with a vector (seed) $\theta_{0}$. We want to now how can we move from this position to the one where the minimum is located. Thus, we need to answer two questions:
+
+**1. In which direction should we move?**
+
+Let's assume we move on a direction $\hat{u}$. Then, the directional derivative (rate of change) $D_{u}(J)=||\nabla J||cos(\phi)$ takes its maximum value whenever $cos(\phi)=1$, i.e. $\phi=0$, which means that $\hat{u}$ is in the direction of $\nabla J$. This would be the direction of maximum ascent, so we should move in the opposite direction of the gradient of $J$, given by
+
+$$\hat{u}=-\frac{\nabla J(\theta_{0})}{||\nabla J(\theta_{0})||}.$$
+
+Also, it is important to mention that the gradient is orthogonal to the contour plots. As we will see in the next section, this is relevant when analyzing the path taken by the iterations of the line search algorithm.
+
+**2. How big should our steps be?** 
+
+So we started at a position $\theta_{0}$ and we want to move to a new position $\theta_{1}$. We now that we will descent faster through the paraboloid if we move on the (minus) gradient direction. In other words, our new position shall be
+
+$$\theta_{1}=\theta_{0}-\alpha\nabla J(\theta),$$
+
+for some $\alpha\in\mathbb{R}$. What should be the value of $\alpha$? If it is too big we may end up on the other side of the surface with no progress at all. Moreover, we could have gone uphill instead of downhill. But if it is too small, we will never arrive to the solution. It can be shown that the value of $\alpha$ that minimizes $J$ at this step is
+
+$$\alpha=\frac{||r_{0}||^{2}}{r_{0}^{T}Ar_{0}},$$
+
+where $r_{0}=A\theta_{0}-b$ is the residual at the first iteration. If we replicate this same iteration $M$ times until $||r_{M}||<tolerance$ we got what is known as the line search algorithm and the solution is $\theta_{M}$.
+
+```{r}
+sd_optm <- function(x, y, seed = NULL, tol = 1e-6, M = 50) {
+
+  # Verifies input quality
+  m <- nrow(x); n <- ncol(x)
+  if (!all(is.matrix(x), is.matrix(y))) 
+    stop("x and y must be matrices.")
+  if (m != nrow(y)) stop("Incompatible matrices.")
+  if (is.null(seed)) seed <- as.matrix(rep(0, n))
+  if (n != nrow(seed) | !is.matrix(seed)) stop("Bad seed.")
+  if (!is.numeric(M)) stop("Invalid number of iterations.")
+  M <- as.integer(M)
+
+  # Previous calculations
+  A <- t(x) %*% x
+  b <- t(x) %*% y
+  theta <- seed
+  if (det(A) == 0) stop("Need to regularize A.")
+  
+  # Steepest descent line search algorithm
+  r <- A %*% theta - b
+  alpha <- (t(r) %*% r) / (t(r) %*% A %*% r)
+  eps <- tol + 0.1
+  i <- 0
+
+  while (eps > tol & i < M) {
+    i <- i + 1
+    theta <- theta - alpha[1, 1] * r
+    r <- A %*% theta - b
+    alpha <- (t(r) %*% r) / (t(r) %*% A %*% r)
+    eps <- norm(r, "2")
+  }
+
+  # Results  
+  return(theta)
+}
+```
+
+With this method the second step would be given by
+
+$$\theta_{2}=\theta_{1}-\alpha\nabla J,$$
+
+for a new value of $\alpha=||r_{1}||^{2}/r_{1}^{T}Ar_{1}$. What if, instead of keep moving on orthogonal directions, we find a way to move straight to the bottom of the paraboloid. Well, recall that we are solving the problem $A\theta=b$, where $A$ is a symmetric positive-definite matrix. If we think of $A$ as a transformation we will notice that it stretches the space spanned by $\theta$, so it makes circles look like ellipses. In that line of thought, if $A$ were a multiple of the identity $I$, we will have circles as contours and the gradient (orthogonal) directions would go straight to the center where the minimum is located. So, if after the first iteration we move on a A-orthogonal direction that takes into account the fact that the space is being transformed, we will be able to jump directly to the minimum. This is known as the conjugate direction and that is why this method is called the conjugate gradient.
+
+I will not show the mathematical detils of this method, but after the first iteration we will move in A-orthogonal directions $p$ instead of the traditional orthogonal direction of $r$, so that $r_{0}=p_{0}$ and
+
+$$
+\begin{eqnarray*}
+\theta_{i+1} &=& \theta_{i} + \alpha_{i}p_{i}, \\
+r_{i+1} &=& r_{i} + \alpha_{i}Ap_{i}, \\
+p_{i+1} &=& r_{i} + \beta_{i}p_{i}, \\
+\beta_{i+1} &=& \frac{||r_{i+1}||^{2}}{||r_{i}||^{2}}, \\
+\alpha_{i+1} &=& -\frac{||r_{i+1}||^{2}}{p_{i+1}^{T}Ap_{i+1}}.
+\end{eqnarray*}
+$$
+
+The code is pretty similar to the one for the line search algorithm and just need to update the main code plus other minor tweaks, as shown below:
+
+```{r}
+cg_optm <- function(x, y, seed = NULL, tol = 1e-6) {
+  
+  # Verifies input quality
+  m <- nrow(x); n <- ncol(x)
+  if (!all(is.matrix(x), is.matrix(y))) 
+    stop("x and y must be matrices.")
+  if (m != nrow(y)) stop("Incompatible matrices.")
+  if (is.null(seed)) seed <- as.matrix(rep(0, n))
+  if (n != nrow(seed) | !is.matrix(seed)) stop("Bad seed.")
+
+  # Previous calculations
+  A <- t(x) %*% x
+  b <- t(x) %*% y
+  theta <- seed
+  if (det(A) == 0) stop("Need to regularize A.")
+  
+  # Conjugate gradient algorithm
+  rl <- A %*% theta - b
+  r <- rl
+  p <- rl
+  alpha <- - (norm(r, "2") ^ 2) / (t(r) %*% A %*% r)[[1]]
+  eps <- tol + 0.1
+  i <- 0
+  
+  while (eps > tol & i < n) {
+    i <- i + 1
+    theta <- theta + alpha * p
+    r <- rl + alpha * (A %*% p)
+    beta <- (norm(r, "2") / norm(rl, "2")) ^ 2
+    eps <- norm(r, "2")
+    p <- r + beta * p
+    alpha <- - (norm(r, "2") ^ 2) / (t(p) %*% A %*% p)[[1]]
+    rl <- r
+  }
+  
+  # Results  
+  return(theta)
+}
+```
+
+## One example
+
+Let's analyze a two dimensional example to be able to have an intuition about this problem. Consider the linear system in $(1)$ with: 
+
+$$
+X=\begin{pmatrix}
+3 & 1 \\ 
+0 & 1
+\end{pmatrix}
+\quad and \quad
+y=\begin{pmatrix}
+1 \\
+-1 
+\end{pmatrix}.
+$$
+
+Note that $det(X)=2\neq 0$, so $X\theta=y$ has a unique and exact solution given by $\theta=X^{-1}y$, i.e.
+
+$$
+\begin{pmatrix}
+\theta_{1} \\
+\theta_{2} 
+\end{pmatrix}=
+\begin{pmatrix}
+3 & 1 \\ 
+0 & 1
+\end{pmatrix}^{-1}
+\begin{pmatrix}
+1 \\
+-1 
+\end{pmatrix}=
+\begin{pmatrix}
+2/3 \\
+-1 
+\end{pmatrix}
+$$
+
+However, the purpose of this example is to use steepest descent methods to find a numerical solution and be able to plot the contours of the objective function $J(\theta)$, with the paths taken by the iterations of the line search algorithm and the conjugate gradient algorithm, so we have a graphical intuition of what these methods are doing.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+x <- matrix(c(3, 1, 0, 1), byrow = TRUE, nrow = 2)
+y <- matrix(c(1, -1), nrow = 2)
+
+# Tabla para almacenar resultados
+resultados <- tibble(
+  i = vector("double", 0),
+  theta1 = vector("double", 0),
+  theta2 = vector("double", 0),
+  alpha = vector("double", 0),
+  jota = vector("double", 0),
+  metodo = vector("character", 0)
+)
+
+# Función que almacena los resultados
+guardar <- function(metodo) {
+  resultados <<- bind_rows(
+    resultados,
+    tibble(
+      i = i,
+      theta1 = theta[1, 1, drop = TRUE],
+      theta2 = theta[2, 1, drop = TRUE],
+      alpha = alpha,
+      jota = 0.5 * norm(x %*% theta - y, "2") ^ 2,
+      metodo = metodo
+    )
+  )
+}
+
+# Calcula matrices previas
+A <- t(x) %*% x
+b <- t(x) %*% y
+seed <- as.matrix(rep(0, 2))
+tol <- 1e-3
+
+M <- 10L
+
+# Calcula matrices previas
+A <- t(x) %*% x
+b <- t(x) %*% y
+theta <- seed
+
+# Iteración del gradiente descendiente
+r <- A %*% theta - b
+alpha <- ((t(r) %*% r) / (t(r) %*% A %*% r))[[1]]
+eps <- tol + 0.1
+i <- 0
+guardar("SD")
+
+while (eps > tol | i < M) {
+  i <- i + 1
+  theta <- theta - alpha * r
+  r <- A %*% theta - b
+  alpha <- ((t(r) %*% r) / (t(r) %*% A %*% r))[[1]]
+  eps <- norm(r, "2")
+  guardar("SD")
+}
+
+M <- nrow(y)
+theta <- seed
+
+# Iteración del gradiente conjugado
+rl <- A %*% theta - b
+r <- rl
+p <- rl
+alpha <- - (norm(r, "2") ^ 2) / (t(r) %*% A %*% r)[[1]]
+eps <- tol + 0.1
+i <- 0
+guardar("CG")
+
+while (eps > tol | i < M) {
+  i <- i + 1
+  theta <- theta + alpha * p
+  r <- rl + alpha * (A %*% p)
+  beta <- (norm(r, "2") / norm(rl, "2")) ^ 2
+  eps <- norm(r, "2")
+  guardar("CG")
+  p <- r + beta * p
+  alpha <- - (norm(r, "2") ^ 2) / (t(p) %*% A %*% p)[[1]]
+  rl <- r
+}
+
+colnames(resultados)[5:6] <- c("objective", "method")
+
+```
+
+Below you can visualize $J(\theta)$, that is a paraboloid as we stated before. This is important because for the linear regression problem we have a quadratic figure with a unique global minimum. Even if we use more than two dimensions, this fact holds (hyper-figures). You can also notice an interesting feature of $J$ which is that the contours are ellipses. The conjugate gradient leverage on this fact to determine an A-orthogonal vector in the direction that jumps directly to the center of the ellipses instead of moving on orthogonal directions (zigzag) to the center, as the line search algorithm. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+# Función para J(\theta)
+ml_j <- function(x, y, t) {
+  r <- x %*% t - y
+  return(0.5 * (norm(r, "2") ^ 2))
+}
+
+# Malla para gráfica 3D
+j_x <- x
+j_y <- y
+theta1 <- seq(-2.5, 2.5, 0.025)
+theta2 <- seq(-2.5, 2.5, 0.025)
+
+malla <- matrix(rep(0, length(theta1) * length(theta2)), nrow = length(theta1))
+for (i in seq_along(theta1)) {
+  for (j in seq_along(theta2)) {
+    malla[i, j] <- ml_j(
+      x = j_x,
+      y = j_y,
+      t = as.matrix(c(theta1[i], theta2[j]))
+    )
+  }
+}
+
+#Grafica
+j_objective <- malla
+fig <- plot_ly(x = theta1, y = theta2, z = ~j_objective) %>% 
+  add_surface(
+    contours = list(
+      z = list(
+        show = TRUE,
+        usecolormap = TRUE,
+        highlightcolor = "#ff0000",
+        project = list(z = TRUE)
+      )
+    )
+  )
+fig
+```
+
+Tables 1 and 2 show the iterations for each method. Note that the line search algorithm needs more than 2 iterations because it goes in perpendicular directions to the current contour of the paraboloid, while the conjugate gradient, using conjugate directions, jumps directly from the first iteration to the minimum of the paraboloid on the second iteration.<br />  <br />  
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, results='asis'}
+# Imprime resultados  
+kableExtra::kbl(
+  resultados %>% filter(method == "SD"), 
+  caption = "Iterations for the line search algorithm."
+) %>% kableExtra::kable_styling()
+```
+
+<br />  
+It took around 22 iterations for the line search algorithm to find a solution with a tolerance of just $10^{-3}$ on the norm of the error. The conjugate gradient, on the other hand, takes 2 iteration to find the 'exact' solution.<br />  <br />  
+
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, results='asis'}
+# Imprime resultados  
+kableExtra::kbl(
+  resultados %>% filter(method == "CG"), 
+  caption = "Iterations for the conjugate gradient algorithm."
+) %>% kableExtra::kable_styling()
+```
+
+<br />  
+Finally, we can plot the projection of the path of the solution vectors of these methods on the plane. As explained in the previous section, the line search is always moving in perpendicular directions a quantity $\alpha$ that minimizes $J$ in that direction; however, the conjugate gradient moves on the conjugate direction to get straight to the solution. Conjugate gradient will take at most $n$ steps, being $n$ the dimension of the square positive-definite matrix $A$.    
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+# Encuentra \theta_{2}s dado \theta_{1}
+sol_t2 <- function(t, k) {
+  disc <- 36 * t ^ 2 - 8 * (9 * t ^ 2 - 6 * t + 2 * (1 - k))
+  if (disc < 0) {
+    return(
+      data.frame(
+        theta21 = NA_real_, 
+        theta22 = NA_real_
+      )
+    )
+  } else if (disc == 0) {
+    return(
+      data.frame(
+        theta21 = 0.25 * (- 6 * t),
+        theta22 = NA_real_
+      )
+    )
+  } else {
+    return(
+      data.frame(
+        theta21 = 0.25 * (- 6 * t + sqrt(disc)),
+        theta22 = 0.25 * (- 6 * t - sqrt(disc))
+      )
+    )
+  }
+}
+
+# Angulo en grados
+arctan <- function(x, y) {
+  theta <- atan(y / x) * 180 / pi
+  if (x < 0 & y > 0) theta <- theta + 180
+  if (x < 0 & y < 0) theta <- theta + 180
+  if (x > 0 & y < 0) theta <- theta + 360
+  if (x == 0 & y > 0) theta <- 90
+  if (x == 0 & y < 0) theta <- 270
+  return(theta)
+}
+
+# Itera para cada J en la tabla 1
+elipses <- expand.grid(
+  theta1 = seq(0.0, 1.0, 0.001),
+  objective = filter(resultados, method == "SD", objective > 0.001)$objective
+) %>% 
+  mutate(theta2 = Map(sol_t2, theta1, objective)) %>% 
+  unnest(theta2) %>% 
+  drop_na() %>% 
+  pivot_longer(theta21:theta22, values_to = "value") %>% 
+  select(objective, theta1, theta2 = value) %>%
+  mutate(
+    metodo = "Elipse", 
+    angulo = map2_dbl(theta1 - (2 / 3), theta2 - (-1), arctan)
+  ) %>% 
+  filter(theta2 != -1) %>% 
+  arrange(desc(objective), angulo)
+
+
+# Grafica
+ggplot() +
+  geom_path(
+    data = elipses,
+    mapping = aes(x = theta1, y = theta2, group = objective),
+    size = 0.25, 
+    alpha = 0.5
+  ) +
+  geom_path(
+    data = resultados,
+    mapping = aes(x = theta1, y = theta2, linetype = method, colour = method),
+    arrow = arrow(length = unit(0.10,"cm"), ends = "last"),
+    size = 1.25
+  ) +
+  labs(x = quote(theta[1]), y = quote(theta[2]))
+  
+```
+
+
+## Linear regression code.
+
+Finally, you can find below the code for the functions for linear regression using the steepest descent methods. This functions are ran for the iris data set to compare with the results of the linear regression done by R.
+
+```{r}
+sd_lm <- function(dataset, intercept = TRUE) {
+
+  # This function receives a data frame for which:
+  # - The dependent variable is the first column.
+  # - The independent variables start on the second column.
+  # - Formal 'intercept' adds a column of 1's if TRUE.
+  # - NA observations are neglected..
+  # - Requires tidyr (part of the tidyverse).
+
+  # Previous verification
+  dataset <- tidyr::drop_na(dataset)
+  if (nrow(dataset) == 0) stop("Not enough data.")
+  if (!all(sapply(dataset, typeof) == "double")) 
+    stop("Columns must be of type double.")
+  
+  # Find parameters
+  n <- nrow(dataset)
+  x <- as.matrix(dataset[, 2:ncol(dataset)])
+  if (intercept) x <- cbind(rep(1, n), x)
+  y <- as.matrix(dataset[, 1])
+  parametros <- sd_optm(x, y)
+  
+  # Other important elements
+  residuales <- x %*% parametros - y
+  RMSE <- sqrt(sum(residuales ^ 2) / (n - ncol(x)))
+  SSR <- t(parametros) %*% t(x) %*% y - n * mean(y) ^ 2
+  SSE <- t(y) %*% y - t(parametros) %*% t(x) %*% y
+  SST <- SSR + SSE
+    
+  # List with results
+  return(
+    list(
+      Coef = parametros,
+      RMSE = RMSE,
+      RSquared = SSR / SST
+    )
+  )
+}
+
+# Compare with lm
+sd_lm(iris[,1:2])$Coef
+```
+
+Regarding the code for the conjugate gradient I will not provide it here, but it is almost the same one (just need to change one line). You can try it yourself and if you have problems doing it contact me, I will be happy to help you!
+
+## References
+
+I used as a main reference the lecture notes and homeworks from [Herman Jaramillo's](http://jaramillo_herman.workfolio.com/) Machine Learning course.
