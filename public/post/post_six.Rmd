@@ -1,7 +1,7 @@
 ---
-title: "General Binomial Models and the Cox-Ross-Rubenstein Model"
+title: "Binomial Trees and the Cox-Ross-Rubinstein Model"
 author: "Nicolas Cuesta Quintero"
-date: 2020-10-01T20:00:00-05:00
+date: 2021-02-04T00:00:00-05:00
 categories: ["R"]
 tags: ["Options pricing", "trading", "quantfinance"]
 ---
@@ -11,7 +11,7 @@ both academics and practitioners. This is the price to pay for options represent
 insurance claims, interest or exchange rate hedging swaps, forward prices of commodities or 
 even stock options for top managerial position salaries. Usually the binomial model for
 pricing derivatives at Undergraduate level is used to show how to price options by taking
-the expected present value of future claims over risk-neutral probabilities. The aim of this 
+the expected present value of future claims on risk-neutral probability spaces. The aim of this 
 post is to show a generalized version that allows to use binomial models to price any 
 kind of derivative, the importance of the No Arbitrage Principle and its equivalence
 to the risk-neutral probability measure (martingale), to conclude with the 
@@ -22,31 +22,55 @@ We will use the following libraries:
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
-#library(DiagrammeR)
-library(vtree)
 ```
 
+Discrete models for derivatives pricing are mostly based on trees, that trace all possible paths for the underlying asset spot price, and determine the derivative value based on the projected possible outcome values for the spot at expiration. These trees have as many steps as the appraiser wants to consider. For instance, if trading happens every five seconds and the option expires at market close, the tree can have 5,760 steps. However, the number of branches is a more complex question because it can lead to a unspecified systems of linear equations. Having a binomial tree is enough to price an option with one underlying stock, but miss-specified if we deal with a basket option. If we have two underlying stocks and one option, we would need to use a trinomial tree. On this post I am going to focus on using binomial trees to price any kind of derivative using the non-arbitrage principle, considering the limitations of the model. Note, however, than compared to popular knowledge on binomial trees, I will extend the concept to allow for pricing exotic options on one underlying asset, extending from classic path-independent (European) call option to a path-dependent Asian options, among others.
+
+## Spot prices processes
+
+To build the spot price tree we are going to start from its most recent price known, and assume two possible outcomes every single moment. Let me explain. Say we want to price our derivative using a three steps binomial tree for the following weekdays. Assuming today is Tuesday end of day, we have to analyze the spot price on Wednesday, Thursday and Friday. We assume that the spot price is a random variable $S(n):\Omega\rightarrow(0,\infty)$ in some probability space $(\Omega,\mathcal{F},P)$, where the price can go up or down by $S(n-1)U$ or $S(n-1)D$ respectively, every single moment of time. Thus, the sample space is given by
+
+$$\Omega=\{u,d\}^{3}=\{uuu,uud,\dots,ddu,ddd\};$$
+
+with some probability measure $P:\Omega\rightarrow[0,1]$ such that $P(\{u\})=p$ and $P(\{d\})=1-p$. We also assume the existence of a risk-free asset $A$ that can be used to lend or borrow money at a constant interest rate $R$. For instance, if we borrow $A(0)$ at moment 0, we owe $A(n)=A(0)(1+R)^{n}$ at moment *n* (see figure below).
+
+<center>
+![Figure 1. Price path for the underlying asset.](/post/images/post_six_spotTree.png){#id .class width=100% height=100%}
+</center>
+
+Notice that by commutativity law, we could have drawn the tree as a recombining one, i.e. since 
+
+$$S^{ud}(2)=S(0)(1+U)(1+D)=S(0)(1+D)(1+U)=S^{du}(2),$$
+
+we were able to avoid some repetition in the tree. However, when pricing path-dependent derivatives each individual cell will become important and has its own derivative value. Therefore, I leave the general case from the beginning so the reader can get familiar with it.
+
 ```{r}
-vtree(FakeData, "Category Group", pngknit = FALSE)
+# Determine spot price given total number of steps n, 
+# and number of upward movements u_n.
+spot_price <- function(s0, u, d, n, u_n = n) 
+  s0 * (1 + u) ^ (u_n) * (1 + d) ^ (n - u_n)
+
+# Risk-free asset value at moment n.
+rf_price <- function(a0, r, n) 
+  a0 * (1 + r) ^ n
 ```
 
+## No Arbitrage Pricing
 
-## Single-step asset pricing models
+Consider a portfolio holding two assets: the risk-free asset and the derivative underlying asset. If we can allocate our money in these two assets in such a way that it replicates the derivative cash flows, then we will end up with the same asset (stream of cash flows) in two different markets, the spot market and the derivatives market. Moreover, we can create a portfolio that holds both the derivative and the replicating portfolio with opposite positions; however, for the latter we would need to change the allocation in each asset at each step, so we rather call this portfolio a strategy. Intuitively, an arbitrage surges when the price of the same asset is different in both markets so that we can make a free lunch buying in the cheap market and selling in the expensive one. Therefore, we define an arbitrage opportunity as follows:
 
-Let me exemplify the main point with a single-step model of a European Call option.
+An arbitrage is a strategy with value $V$ such that $V(0)=0$ and $V(n)\geq0$ with strict inequality for some $n>0$. 
 
-### European Call Options
+## The Martingale Property
 
-### No Arbitrage Principle
+## The Cox-Ross-Rubinstein binomial model
 
-### Risk-neutral probability measures
+The brilliance of Cox, Ross and Rubinstein (CRR) model is that they were able to value path-independent derivatives using binomial trees with a very simple formula, without any need to worry about explicitly building two trees or applying the martingale property. If the option payoff can be written as $h(S(n=N))$, where $h:\mathbb{R}\mapsto\mathbb{R}$ is a continuous function and $N$ is the total number of steps of the model (i.e. the derivative is path-independent), then its value is given by
 
-## The binomial model
+$$V(0)=(1+R)^{-N}\times\sum_{k=0}^{N}{N\choose k}q^{k}(1-q)^{N-k}h\left(S(0)(1+U)^{k}(1+D)^{N-k}\right).$$
 
 ```{r}
-dvt_call <- function(s) max(s - 105, 0)
-
-# path-independent
+# CRR valuation
 dvt_price <- function(h, s, u, d, r, N) {
   q <- (r - d) / (u - d)
   scenarios <- choose(N, 0:N) * q ^ (0:N) * (1 - q) ^ (N:0) * sapply(
@@ -54,14 +78,17 @@ dvt_price <- function(h, s, u, d, r, N) {
   sum(scenarios) * (1 + r) ^ (-N)
 }
 
+# Example: European Call
+
+# Option payoff - h(S)
+dvt_call <- function(s) max(s - 105, 0)
+
+# Option value - V(0)
 dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)
 ```
-https://rich-iannone.github.io/DiagrammeR/#features
-
-
-
-## The Cox-Ross-Rubenstein model
 
 ## References
 
 [1] Capiński, M., & Kopp, E. (2012). *Discrete models of financial markets* (Vol. 1). Cambridge University Press.
+
+[2] Hull C, John (2015). *Options, Futures and other Derivatives* (9th edition). Pearson Education.

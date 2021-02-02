@@ -6,7 +6,7 @@ description: 'Resume'
 Download the full version in [spanish](/pdf/cv_spanish.pdf) or [english](/pdf/cv_english.pdf) for more info.
 
 ### Profile
-Financial Engineer and candidate to a master's in computational and scientific modeling. Located in Medellín, Colombia, he considers himself as a Finance passionate and an R enthusiast, always trying to tackle financial problems from a quantitative and computational perspective. His recent experience has let him improve his computational skills, learn about Business Intelligence and dive deep into real estate and alternative investments Finance. 
+Financial Engineer and candidate to a master's in Computational Science. Located in Medellín, Colombia, he considers himself as a Finance passionate and an R enthusiast, always trying to tackle financial problems from a quantitative and computational perspective. His recent experience has let him improve his computational skills, learn about Business Intelligence and Analytics while diving deep down into real estate and alternative investments Finance. 
 
 ### Experience
 &nbsp;
@@ -24,9 +24,9 @@ Financial Engineer and candidate to a master's in computational and scientific m
 ### Education
 &nbsp;
 
-* MSc (candidate) Scientific and computational modeling - UdeM.
+* MSc (candidate) Computational Science - [UdeM](https://www.udem.edu.co/index.php/en/).
 
-* Financial Engineering - UdeM.
+* Financial Engineering - [UdeM](https://www.udem.edu.co/index.php/en/).
 
 ### Languages
 &nbsp;

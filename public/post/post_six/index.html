@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang='en'><head>
-  <title>General Binomial Models and the Cox-Ross-Rubenstein Model - Nicolas Cuesta</title>
+  <title>Binomial Trees and the Cox-Ross-Rubinstein Model - Nicolas Cuesta</title>
   <link rel='canonical' href='/post/post_six/' />
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1' />
@@ -22,18 +22,18 @@
 <link rel="stylesheet" href="/sass/style.min.cf2eeff825d4dbc673ce0b82d270d9fc32d34973a7d5cd079e0dcf4fe3e77515.css" integrity="sha256-zy7v&#43;CXU28ZzzguC0nDZ/DLTSXOn1c0Hng3PT&#43;PndRU=" media="screen">
 <link rel="stylesheet" href="/syntax.min.css" integrity="" media="screen">
 
-  <meta property="og:title" content="General Binomial Models and the Cox-Ross-Rubenstein Model" />
-<meta property="og:description" content="Pricing derivative securities has been one of the main financial problems forboth academics and practitioners. This is the price to pay for options representinginsurance claims, interest or exchange rate hedging swaps, forward prices of commodities oreven stock options for top managerial position salaries. Usually the binomial model forpricing derivatives at Undergraduate level is used to show how to price options by takingthe expected present value of future claims over risk-neutral probabilities." />
+  <meta property="og:title" content="Binomial Trees and the Cox-Ross-Rubinstein Model" />
+<meta property="og:description" content="Pricing derivative securities has been one of the main financial problems forboth academics and practitioners. This is the price to pay for options representinginsurance claims, interest or exchange rate hedging swaps, forward prices of commodities oreven stock options for top managerial position salaries. Usually the binomial model forpricing derivatives at Undergraduate level is used to show how to price options by takingthe expected present value of future claims on risk-neutral probability spaces." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/post/post_six/" />
-<meta property="article:published_time" content="2020-10-01T20:00:00-05:00" />
-<meta property="article:modified_time" content="2020-10-01T20:00:00-05:00" />
+<meta property="article:published_time" content="2021-02-04T00:00:00-05:00" />
+<meta property="article:modified_time" content="2021-02-04T00:00:00-05:00" />
 
-  <meta itemprop="name" content="General Binomial Models and the Cox-Ross-Rubenstein Model">
-<meta itemprop="description" content="Pricing derivative securities has been one of the main financial problems forboth academics and practitioners. This is the price to pay for options representinginsurance claims, interest or exchange rate hedging swaps, forward prices of commodities oreven stock options for top managerial position salaries. Usually the binomial model forpricing derivatives at Undergraduate level is used to show how to price options by takingthe expected present value of future claims over risk-neutral probabilities.">
-<meta itemprop="datePublished" content="2020-10-01T20:00:00-05:00" />
-<meta itemprop="dateModified" content="2020-10-01T20:00:00-05:00" />
-<meta itemprop="wordCount" content="374">
+  <meta itemprop="name" content="Binomial Trees and the Cox-Ross-Rubinstein Model">
+<meta itemprop="description" content="Pricing derivative securities has been one of the main financial problems forboth academics and practitioners. This is the price to pay for options representinginsurance claims, interest or exchange rate hedging swaps, forward prices of commodities oreven stock options for top managerial position salaries. Usually the binomial model forpricing derivatives at Undergraduate level is used to show how to price options by takingthe expected present value of future claims on risk-neutral probability spaces.">
+<meta itemprop="datePublished" content="2021-02-04T00:00:00-05:00" />
+<meta itemprop="dateModified" content="2021-02-04T00:00:00-05:00" />
+<meta itemprop="wordCount" content="1014">
 
 
 
@@ -147,7 +147,7 @@
 
 
 <span  class="active">
-  <a href="/post/post_six/">General Binomial Models and the Cox-Ross-Rubenstein Model</a>
+  <a href="/post/post_six/">Binomial Trees and the Cox-Ross-Rubinstein Model</a>
   
 </span>
 
@@ -156,7 +156,7 @@
     
     <main id="content" class="post">
 
-<h1>General Binomial Models and the Cox-Ross-Rubenstein Model</h1>
+<h1>Binomial Trees and the Cox-Ross-Rubinstein Model</h1>
 <div class="reading-time">
   <div class="icon">
   <svg width="18px" height="18px" viewBox="0 0 115 115" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img">
@@ -166,7 +166,7 @@
   </svg>
 </div>
 
-  <span>2 minutes</span>
+  <span>5 minutes</span>
 </div>
 
 <div class="published-date">
@@ -178,14 +178,10 @@
   </svg>
 </div>
 
-  <span>October 1, 2020</span>
+  <span>February 4, 2021</span>
 </div>
 
 
-<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
-<script src="/rmarkdown-libs/viz/viz.js"></script>
-<link href="/rmarkdown-libs/DiagrammeR-styles/styles.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/grViz-binding/grViz.js"></script>
 
 
 <p>Pricing derivative securities has been one of the main financial problems for
@@ -193,37 +189,48 @@ both academics and practitioners. This is the price to pay for options represent
 insurance claims, interest or exchange rate hedging swaps, forward prices of commodities or
 even stock options for top managerial position salaries. Usually the binomial model for
 pricing derivatives at Undergraduate level is used to show how to price options by taking
-the expected present value of future claims over risk-neutral probabilities. The aim of this
+the expected present value of future claims on risk-neutral probability spaces. The aim of this
 post is to show a generalized version that allows to use binomial models to price any
 kind of derivative, the importance of the No Arbitrage Principle and its equivalence
 to the risk-neutral probability measure (martingale), to conclude with the
 Cox-Ross-Rubinstein model for European call options. You can expect to find a summary of
 the main theory behind these concepts and functions to make this practical knowledge in R.</p>
 <p>We will use the following libraries:</p>
-<pre class="r"><code>library(tidyverse)
-#library(DiagrammeR)
-library(vtree)</code></pre>
-<pre class="r"><code>vtree(FakeData, &quot;Category Group&quot;, pngknit = FALSE)</code></pre>
-<div id="htmlwidget-1" style="width:672px;height:480px;" class="grViz html-widget"></div>
-<script type="application/json" data-for="htmlwidget-1">{"x":{"diagram":"digraph vtree {\ngraph [layout = dot, compound=true, nodesep=0.1, ranksep=0.5, fontsize=12]\nnode [fontname = Helvetica, fontcolor = black,shape = rectangle, color = black,margin=0.1]\nrankdir=LR;\nNode_L0[style=invisible]\nNode_L1[label=<<FONT POINT-SIZE=\"18\"><FONT COLOR=\"#DE2D26\"><B>Category  <\/B><\/FONT><\/FONT><BR/>> shape=none margin=0]\nNode_L2[label=<<FONT POINT-SIZE=\"18\"><FONT COLOR=\"#3182BD\"><B>Group  <\/B><\/FONT><\/FONT><BR/>> shape=none margin=0]\n\nedge[style=invis];\nNode_L0->Node_L1->Node_L2\n\nedge[style=solid]\nNode_1->Node_2 Node_1->Node_3 Node_1->Node_4\nNode_2->Node_5 Node_2->Node_6\nNode_3->Node_7 Node_3->Node_8\nNode_4->Node_9 Node_4->Node_10\n\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_2[label=<single<BR/>26 (57%)> color=black style=\"rounded,filled\" fillcolor=<#FEE0D2>  ]\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_3[label=<double<BR/>6 (13%)> color=black style=\"rounded,filled\" fillcolor=<#FC9272>  ]\nNode_1[label=<46> color=black style=\"rounded,filled\" fillcolor=<#EFF3FF>]\nNode_4[label=<triple<BR/>14 (30%)> color=black style=\"rounded,filled\" fillcolor=<#DE2D26>  ]\nNode_5[label=<A<BR/>14 (54%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_6[label=<B<BR/>12 (46%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\nNode_7[label=<A<BR/>2 (33%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_8[label=<B<BR/>4 (67%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\nNode_9[label=<A<BR/>8 (57%)> color=black style=\"rounded,filled\" fillcolor=<#DEEBF7>  ]\nNode_10[label=<B<BR/>6 (43%)> color=black style=\"rounded,filled\" fillcolor=<#3182BD>  ]\n\n}\n","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
-<div id="single-step-asset-pricing-models" class="section level2">
-<h2>Single-step asset pricing models</h2>
-<p>Let me exemplify the main point with a single-step model of a European Call option.</p>
-<div id="european-call-options" class="section level3">
-<h3>European Call Options</h3>
-</div>
-<div id="no-arbitrage-principle" class="section level3">
-<h3>No Arbitrage Principle</h3>
-</div>
-<div id="risk-neutral-probability-measures" class="section level3">
-<h3>Risk-neutral probability measures</h3>
-</div>
-</div>
-<div id="the-binomial-model" class="section level2">
-<h2>The binomial model</h2>
-<pre class="r"><code>dvt_call &lt;- function(s) max(s - 105, 0)
+<pre class="r"><code>library(tidyverse)</code></pre>
+<p>Discrete models for derivatives pricing are mostly based on trees, that trace all possible paths for the underlying asset spot price, and determine the derivative value based on the projected possible outcome values for the spot at expiration. These trees have as many steps as the appraiser wants to consider. For instance, if trading happens every five seconds and the option expires at market close, the tree can have 5,760 steps. However, the number of branches is a more complex question because it can lead to a unspecified systems of linear equations. Having a binomial tree is enough to price an option with one underlying stock, but miss-specified if we deal with a basket option. If we have two underlying stocks and one option, we would need to use a trinomial tree. On this post I am going to focus on using binomial trees to price any kind of derivative using the non-arbitrage principle, considering the limitations of the model. Note, however, than compared to popular knowledge on binomial trees, I will extend the concept to allow for pricing exotic options on one underlying asset, extending from classic path-independent (European) call option to a path-dependent Asian options, among others.</p>
+<div id="spot-prices-processes" class="section level2">
+<h2>Spot prices processes</h2>
+<p>To build the spot price tree we are going to start from its most recent price known, and assume two possible outcomes every single moment. Let me explain. Say we want to price our derivative using a three steps binomial tree for the following weekdays. Assuming today is Tuesday end of day, we have to analyze the spot price on Wednesday, Thursday and Friday. We assume that the spot price is a random variable <span class="math inline">\(S(n):\Omega\rightarrow(0,\infty)\)</span> in some probability space <span class="math inline">\((\Omega,\mathcal{F},P)\)</span>, where the price can go up or down by <span class="math inline">\(S(n-1)U\)</span> or <span class="math inline">\(S(n-1)D\)</span> respectively, every single moment of time. Thus, the sample space is given by</p>
+<p><span class="math display">\[\Omega=\{u,d\}^{3}=\{uuu,uud,\dots,ddu,ddd\};\]</span></p>
+<p>with some probability measure <span class="math inline">\(P:\Omega\rightarrow[0,1]\)</span> such that <span class="math inline">\(P(\{u\})=p\)</span> and <span class="math inline">\(P(\{d\})=1-p\)</span>. We also assume the existence of a risk-free asset <span class="math inline">\(A\)</span> that can be used to lend or borrow money at a constant interest rate <span class="math inline">\(R\)</span>. For instance, if we borrow <span class="math inline">\(A(0)\)</span> at moment 0, we owe <span class="math inline">\(A(n)=A(0)(1+R)^{n}\)</span> at moment <em>n</em> (see figure below).</p>
+<center>
+<img src="/post/images/post_six_spotTree.png" title="fig:" id="id" class="class" style="width:100.0%;height:100.0%" alt="Figure 1. Price path for the underlying asset." />
+</center>
+<p>Notice that by commutativity law, we could have drawn the tree as a recombining one, i.e. since</p>
+<p><span class="math display">\[S^{ud}(2)=S(0)(1+U)(1+D)=S(0)(1+D)(1+U)=S^{du}(2),\]</span></p>
+<p>we were able to avoid some repetition in the tree. However, when pricing path-dependent derivatives each individual cell will become important and has its own derivative value. Therefore, I leave the general case from the beginning so the reader can get familiar with it.</p>
+<pre class="r"><code># Determine spot price given total number of steps n, 
+# and number of upward movements u_n.
+spot_price &lt;- function(s0, u, d, n, u_n = n) 
+  s0 * (1 + u) ^ (u_n) * (1 + d) ^ (n - u_n)
 
-# path-independent
+# Risk-free asset value at moment n.
+rf_price &lt;- function(a0, r, n) 
+  a0 * (1 + r) ^ n</code></pre>
+</div>
+<div id="no-arbitrage-pricing" class="section level2">
+<h2>No Arbitrage Pricing</h2>
+<p>Consider a portfolio holding two assets: the risk-free asset and the derivative underlying asset. If we can allocate our money in these two assets in such a way that it replicates the derivative cash flows, then we will end up with the same asset (stream of cash flows) in two different markets, the spot market and the derivatives market. Moreover, we can create a portfolio that holds both the derivative and the replicating portfolio with opposite positions; however, for the latter we would need to change the allocation in each asset at each step, so we rather call this portfolio a strategy. Intuitively, an arbitrage surges when the price of the same asset is different in both markets so that we can make a free lunch buying in the cheap market and selling in the expensive one. Therefore, we define an arbitrage opportunity as follows:</p>
+<p>An arbitrage is a strategy with value <span class="math inline">\(V\)</span> such that <span class="math inline">\(V(0)=0\)</span> and <span class="math inline">\(V(n)\geq0\)</span> with strict inequality for some <span class="math inline">\(n&gt;0\)</span>.</p>
+</div>
+<div id="the-martingale-property" class="section level2">
+<h2>The Martingale Property</h2>
+</div>
+<div id="the-cox-ross-rubinstein-binomial-model" class="section level2">
+<h2>The Cox-Ross-Rubinstein binomial model</h2>
+<p>The brilliance of Cox, Ross and Rubinstein (CRR) model is that they were able to value path-independent derivatives using binomial trees with a very simple formula, without any need to worry about explicitly building two trees or applying the martingale property. If the option payoff can be written as <span class="math inline">\(h(S(n=N))\)</span>, where <span class="math inline">\(h:\mathbb{R}\mapsto\mathbb{R}\)</span> is a continuous function and <span class="math inline">\(N\)</span> is the total number of steps of the model (i.e. the derivative is path-independent), then its value is given by</p>
+<p><span class="math display">\[V(0)=(1+R)^{-N}\times\sum_{k=0}^{N}{N\choose k}q^{k}(1-q)^{N-k}h\left(S(0)(1+U)^{k}(1+D)^{N-k}\right).\]</span></p>
+<pre class="r"><code># CRR valuation
 dvt_price &lt;- function(h, s, u, d, r, N) {
   q &lt;- (r - d) / (u - d)
   scenarios &lt;- choose(N, 0:N) * q ^ (0:N) * (1 - q) ^ (N:0) * sapply(
@@ -231,16 +238,19 @@ dvt_price &lt;- function(h, s, u, d, r, N) {
   sum(scenarios) * (1 + r) ^ (-N)
 }
 
+# Example: European Call
+
+# Option payoff - h(S)
+dvt_call &lt;- function(s) max(s - 105, 0)
+
+# Option value - V(0)
 dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)</code></pre>
 <pre><code>## [1] 23.30745</code></pre>
-<p><a href="https://rich-iannone.github.io/DiagrammeR/#features" class="uri">https://rich-iannone.github.io/DiagrammeR/#features</a></p>
-</div>
-<div id="the-cox-ross-rubenstein-model" class="section level2">
-<h2>The Cox-Ross-Rubenstein model</h2>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
 <p>[1] Capiński, M., &amp; Kopp, E. (2012). <em>Discrete models of financial markets</em> (Vol. 1). Cambridge University Press.</p>
+<p>[2] Hull C, John (2015). <em>Options, Futures and other Derivatives</em> (9th edition). Pearson Education.</p>
 </div>
 
 
@@ -248,7 +258,7 @@ dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)</code></pre>
   </div>
   <footer>
     <div class="footer-wrapper">
-      <p>Made with <a href="https://github.com/rstudio/blogdown/" target="_blank" rel="external">RStudio Blogdown</a> &mdash; Powered by <a href="https://gohugo.io/" target="_blank" rel="external">Hugo</a> and the <a href="https://github.com/bjacquemet/personal-web" target='_blank' rel="external">Personal Web</a> theme. © Nicolás Cuesta Quintero.</p>
+      <p>Made with <a href="https://github.com/rstudio/blogdown/" target="_blank" rel="external">RStudio Blogdown</a> &mdash; Powered by <a href="https://gohugo.io/" target="_blank" rel="external">Hugo</a> and the <a href="https://github.com/bjacquemet/personal-web" target='_blank' rel="external">Personal Web</a> theme. Nicolás Cuesta Quintero ©.</p>
     </div>
   </footer>
   <link href="https://fonts.googleapis.com/css?family=Montserrat:500,600|Raleway:400,400i,600" rel="stylesheet">
