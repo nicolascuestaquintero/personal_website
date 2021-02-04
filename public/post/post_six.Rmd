@@ -24,7 +24,9 @@ We will use the following libraries:
 library(tidyverse)
 ```
 
-Discrete models for derivatives pricing are mostly based on trees, that trace all possible paths for the underlying asset spot price, and determine the derivative value based on the projected possible outcome values for the spot at expiration. These trees have as many steps as the appraiser wants to consider. For instance, if trading happens every five seconds and the option expires at market close, the tree can have 5,760 steps. However, the number of branches is a more complex question because it can lead to a unspecified systems of linear equations. Having a binomial tree is enough to price an option with one underlying stock, but miss-specified if we deal with a basket option. If we have two underlying stocks and one option, we would need to use a trinomial tree. On this post I am going to focus on using binomial trees to price any kind of derivative using the non-arbitrage principle, considering the limitations of the model. Note, however, than compared to popular knowledge on binomial trees, I will extend the concept to allow for pricing exotic options on one underlying asset, extending from classic path-independent (European) call option to a path-dependent Asian options, among others.
+Discrete models for derivatives pricing are mostly based on trees, that trace all possible paths for the underlying asset spot price, and determine the derivative value based on the projected possible outcome values for the spot at expiration. These trees have as many steps as the appraiser wants to consider. For instance, if trading happens every five seconds and the option expires at market close, the tree can have as many 5,760 steps. However, the number of branches is a more complex question because it can lead to an unspecified systems of linear equations. Having a binomial tree is enough to price an option with one underlying stock, but miss-specified if we deal with a basket option. If we have two underlying stocks and one option, we would need to use a trinomial tree. However, the trinomial tree with one underlying asset would lead to a range of possible values for the derivative. 
+
+On this post I am going to focus on using binomial trees to price any kind of derivative using the non-arbitrage principle (considering the limitations of the model just described). Note, however, than compared to popular knowledge on binomial trees, I will extend the concept to allow for pricing exotic options on one underlying asset, extending from a classic path-independent (European) call option to a path-dependent Asian option, among others.
 
 ## Spot prices processes
 
@@ -32,7 +34,7 @@ To build the spot price tree we are going to start from its most recent price kn
 
 $$\Omega=\{u,d\}^{3}=\{uuu,uud,\dots,ddu,ddd\};$$
 
-with some probability measure $P:\Omega\rightarrow[0,1]$ such that $P(\{u\})=p$ and $P(\{d\})=1-p$. We also assume the existence of a risk-free asset $A$ that can be used to lend or borrow money at a constant interest rate $R$. For instance, if we borrow $A(0)$ at moment 0, we owe $A(n)=A(0)(1+R)^{n}$ at moment *n* (see figure below).
+with some probability measure $P:\Omega\rightarrow[0,1]$ such that $P(\{u\})=p$ and $P(\{d\})=1-p$. We also assume the existence of a risk-free asset $A$ that can be used to lend or borrow money at a constant interest rate $R$. For instance, if we borrow $A(0)$ at moment $0$, we owe $A(n)=A(0)(1+R)^{n}$ at moment $n$ (see figure below).
 
 <center>
 ![Figure 1. Price path for the underlying asset.](/post/images/post_six_spotTree.png){#id .class width=100% height=100%}
@@ -57,13 +59,227 @@ rf_price <- function(a0, r, n)
 
 ## No Arbitrage Pricing
 
-Consider a portfolio holding two assets: the risk-free asset and the derivative underlying asset. If we can allocate our money in these two assets in such a way that it replicates the derivative cash flows, then we will end up with the same asset (stream of cash flows) in two different markets, the spot market and the derivatives market. Moreover, we can create a portfolio that holds both the derivative and the replicating portfolio with opposite positions; however, for the latter we would need to change the allocation in each asset at each step, so we rather call this portfolio a strategy. Intuitively, an arbitrage surges when the price of the same asset is different in both markets so that we can make a free lunch buying in the cheap market and selling in the expensive one. Therefore, we define an arbitrage opportunity as follows:
+Consider a portfolio holding two assets: the risk-free asset and the derivative underlying asset. If we can allocate our money in these two assets in such a way that it replicates the derivative cash flows, then we will end up with the same asset (stream of cash flows) in two different markets, the spot market and the derivatives market. Moreover, we can create a portfolio that holds both the derivative and the replicating portfolio with opposite positions; however, for the latter we would need to change the allocation in each asset at each step, so we rather call this portfolio a strategy. Intuitively, an arbitrage surges when the price of the same asset is different in two markets so that we can make a free lunch buying in the cheap market and selling in the expensive one. Therefore, we define an arbitrage opportunity as follows:
 
-An arbitrage is a strategy with value $V$ such that $V(0)=0$ and $V(n)\geq0$ with strict inequality for some $n>0$. 
+An arbitrage is a strategy with value $V$ such that $V(0)=0$ and $V(n)\geq0$ with strict inequality for some $n>0$.
+
+To illustrate how to price options based on the no-arbitrage principle (NAP), consider a one Microsoft (MSFT) stock European call option expiring in two days with Strike $K=240$. Assume that MSFT spot price is $S(0)=239.51$ per share and the risk-free asset allows you to lend at a $R=0.076\%$ APR. Moreover, for modeling purposes we assume $n=2$ and that each day the stock can either increase its price by $U=3\%$ or decrease by $D=-2\%$. Given the spot paths as per previous section, we can determine the value of the option at maturity for each path using the pay-off function $h(S(n))=(S(n)-K)^{+}=max[S(n)-K,0]$;
+
+$$C(2)= \left\{ \begin{array}{l}
+             \left(S(0)(1+U)^{2}-K\right)^{+}=14.10, 
+             \\ \left(S(0)(1+U)(1+D)-K\right)^{+}=1.76,  
+             \\ \left(S(0)(1+D)^{2}-K\right)^{+}=0.
+\end{array}\right.$$
+
+To determine the value of the option at previous steps, we cannot use the pay-off formula $h$ since the option has not expired. Therefore, we need to create replicating portfolios and value them based on the NAP. If at step $n=1$, upper branch, we take a position $x^{u}(2)$ in the stock and $y^{u}(2)$ in the risk-free asset, then there would be two possible values by $n=2$:
+
+\begin{eqnarray*}
+V^{uu} = x^{u}(2)S^{uu}+y^{u}(2)A(2) &=& 14.10, \\
+V^{ud} = x^{u}(2)S^{ud}+y^{u}(2)A(2) &=& 1.76;
+\end{eqnarray*}
+
+with solution
+
+\begin{eqnarray*}
+x^{u}(2) &=& 1.00, \\
+y^{u}(2) &=& -240.00.
+\end{eqnarray*}
+
+This means that at the end of day 1, if the upper case realize, we would have to buy one stock and borrow 240 dollars to be able to replicate the option. Likewise, for the down case,
+
+\begin{eqnarray*}
+V^{du} = x^{d}(2)S^{uu}+y^{d}(2)A(2) &=& 1.76, \\
+V^{dd} = x^{d}(2)S^{ud}+y^{d}(2)A(2) &=& 0.00;
+\end{eqnarray*}
+
+with solution
+
+\begin{eqnarray*}
+x^{u}(2) &=& 0.15, \\
+y^{u}(2) &=& -34.52.
+\end{eqnarray*}
+
+Notice that now we can value the option at $n=1$ in each scenario as
+
+\begin{eqnarray*}
+C^{u}(1)=x(2)S^{u}+y^{u}(2)A(1) &=& 6.70, \\
+C^{d}(1)=x(2)S^{d}+y^{d}(2)A(1) &=& 0.70.
+\end{eqnarray*}
+
+We now repeat the replication process one more time to determine the option price at $n=0$, which is what we are really interested on. From the NAP,
+
+\begin{eqnarray*}
+V^{u} = x(2)S^{u}+y(2)A(2) &=& 6.70, \\
+V^{d} = x(2)S^{d}+y(2)A(2) &=& 0.70;
+\end{eqnarray*}
+
+with solution
+
+\begin{eqnarray*}
+x(1) &=& 0.50, \\
+y(1) &=& -116.72.
+\end{eqnarray*}
+
+Finally. the price of our derivative is given by
+
+$$C(0)=x(1)S(0)+y(1)A(0)=3.10.$$
+
+The important point is that we can price options using the NAP. We can even extend this concept to price exotic options, but before doing that, let's show an equivalent method that will make the process simpler and easier to automate.
 
 ## The Martingale Property
 
-## The Cox-Ross-Rubinstein binomial model
+### Single-step case
+
+Consider a single-step model to price a derivative with pay-off function $h$. At step 1, the replication formulas can be written as
+
+\begin{eqnarray*}
+x(1)S^{u}+y(1)A(1) &=& h(S^{u}), \\
+x(1)S^{d}+y(1)A(1) &=& h(S^{d});
+\end{eqnarray*}
+
+with unique solution
+
+\begin{eqnarray*}
+x &=& \frac{h(S^{u})-h(S^{d})}{S(0)(U-D)}, \\
+y &=& \frac{(1+U)h(S^{d})-(1+D)h(S^{u})}{A(0)(U-D)(1+R)}.
+\end{eqnarray*}
+
+Thus, writing the value of the derivative as $V(0)=xS(0)+yA(0)$ and given $q=(R-D)/(U-D)$, we can demonstrate that
+
+$$V(0)=(1+R)^{-1}\left[qh(S^{u})+(1-q)h(S^{d})\right].$$
+
+In other words, we can define a new probability space $(\Omega,\mathcal{F},Q)$ with a new probability measure $Q$ for which $V(0)=E_{Q}[(1+R)^{-1}h(S(1))]$. Let's highlight two important general aspects of this result:
+
+1- Denote $\tilde{S}$ the present value of $S(n)$. In the new probability space $E_{Q}[\tilde{S}(n)]=S(0)=E_{Q}[\tilde{S}(0)]$ i.e. the expected value of the present value of the spot price is constant. This is called a martingale under $Q$. 
+
+2- Define the return on the underlying asset by $K_{S}(n)=S(n)/S(n-1)-1$, then $E_{Q}[K_{S}]=R$. This is why we call $Q$ a risk-neutral probability, while the excess return under $P$ is proportional to the standard deviation of $K$, it is zero under $Q$.
+
+### Multi-step case
+
+Notice that at each step we can create a partition $\mathcal{P}$ of the sample space. For instance, following the three step model depicted above, in the second step we have $\mathcal{P}_{2}=\{B_{uu},B_{ud},B_{du},B_{dd}\}$ where:
+
+\begin{eqnarray*}
+B_{uu} &=& \{\mathbf{uu}u, \mathbf{uu}d\}, \\
+B_{ud} &=& \{\mathbf{ud}u, \mathbf{ud}d\}, \\
+B_{du} &=& \{\mathbf{du}u, \mathbf{du}d\}, \\
+B_{dd} &=& \{\mathbf{dd}u, \mathbf{dd}d\}.
+\end{eqnarray*}
+
+We can calculate the excepted value of the derivative under $Q$ in each of the second step nodes, as per the single-step case, and repeat the process going backwards in the tree. In th first node we make a new partition of the sample space
+
+$$\mathcal{P}_{1}=\{B_{u},B_{d}\}=\{\{\mathbf{u}uu,\mathbf{u}ud,\mathbf{u}du,\mathbf{u}dd\},\{\mathbf{d}uu,\mathbf{d}ud,\mathbf{d}du,\mathbf{d}dd\}\},$$
+
+and price the derivative in each of the two resulting nodes. In general,
+
+$$\tilde{V}_{(x,y)}(n)=E_{Q}\left[\tilde{V}_{(x,y)}(n+1)|\mathcal{P_{n}}\right].$$
+
+In particular, for American options, in contrast to the European case considered so far, the long position can exercise his right at any trading date, even before the expiration date. The decision on waiting  to exercise the option will depend on the price of its European counterpart. Thus,
+
+$$\tilde{V}(n)=max\left[\tilde{h}(S(n)),E_{Q}[\tilde{V}(n+1)|\mathcal{P}_{n}]\right].$$
+
+### Example
+
+Consider an Asian option with the same conditions as the European option of the previous section. The only difference for the example will be the pay-off function now given by
+
+$$h(S(n))=\left(\sum_{i=0}^{n}{S(i)}-K\right)^{+}.$$
+
+Consider the upper side of partition $\mathcal{P}_{1}$, i.e. $B_{u}$. We have
+
+\begin{eqnarray*}
+V^{uu}(2) = \left(\frac{239.51+246.70+254.10}{3}-240\right)^{+} &=& 6.77, \\
+V^{ud}(2) = \left(\frac{239.51+246.70+241.76}{3}-240\right)^{+} &=& 2.66.
+\end{eqnarray*}
+
+Then, 
+
+$$V^{u}(1)=\frac{1}{1+R}\left[qV^{uu}+(1-q)V^{ud}\right]=4.30.$$
+
+Likewise, the reader can easily verify that $V^{du}(2) = V^{dd}(2) = 0$ and thus $V^{d}(1) = 0$. Finally,
+
+$$V(0)=\frac{1}{1+R}\left[qV^{u}+(1-q)V^{d}\right]=1.72.$$
+
+<center>
+![Figure 2. Price path for the Asian option.](/post/images/post_six_AsianTree.png){#id .class width=100% height=100%}
+</center>
+
+Here you can find the code to apply the binomial pricing method to path-independent European-type derivatives.
+
+```{r}
+# Binomial pricing (only European type)
+dvt_binom <- function(h, s, u, d, r, N) {
+  
+  # Function that determine number of U's given the number of steps
+  f_us <- function(n) {
+    
+    # Switch flag
+    f_flag <- function() ifelse(flag == 1, flag <<- 0, flag <<- 1)
+    
+    # Populate sample space as a matrix 
+    n_row <- 2 ^ n; n_col <- n
+    us <- matrix(rep(0, n_row * n_col), nrow = n_row, ncol = n_col)
+    for (j in n_col:1) {
+      flag <- 1 # u
+      n_perGeom <- 2 ^ (n_col - j) # Geometric trick explained below
+      k <- n_perGeom
+      for (i in 1:n_row) {
+        if (k == 0) {
+          f_flag()
+          k <- n_perGeom - 1
+        } else {
+          k <- k - 1
+        }
+        us[i, j] <- flag
+      }
+    }
+ 
+    # Return number of u's per tree branch
+    return(apply(us, 1, sum))
+  }
+  
+  # Risk-neutral probability
+  q <- (r - d) / (u - d)
+
+  # Backward prop
+  for (i in N:0) {
+    v <- vector("double", length = 2 ^ i)  
+    k <- 1
+    # Right hand side of the tree (implicit value)
+    if (i == N) {
+      v <- sapply(spot_price(s, u, d, N, u_n = f_us(N)),h)
+    # Otherwise
+    } else {
+      for (j in 1:(2 ^ i)) {
+        v[j] <- (q * v0[k] + (1 - q) * v0[k + 1]) / (1 + r)
+        k <- k + 2
+      }
+    }
+    # Next iteration
+    v0 <- v
+  }
+  
+  # Return derivative price
+  return(v0)
+}
+
+# Example: European Call
+
+# Call option payoff - h(S)
+dvt_call <- function(s) max(s - 240, 0)
+
+# Option price - V(0)
+dvt_binom(dvt_call, 239.51, 0.03, -0.02, 0.00076 / 360, 2)
+```
+
+The geometric trick for the function *f_us* is self-explanatory considering the figure below. As you move from the right to the left, the sequence of u's and d's increase by a factor of $2^{k}$ for $k=0,1,\dots,n-1$.
+
+<center>
+![Figure 3. Trick to create f_us function.](/post/images/post_six_geomTrick.png){#id .class width=10% height=5%}
+</center>
+
+
+Finally, it is important to notice that, to have an accurate price of your derivative, you may want to use thousands of steps. This algorithm will be very slow in that situation. It is recommended to use a high-performance language such as C++.
+
+## Cox-Ross-Rubinstein binomial model
 
 The brilliance of Cox, Ross and Rubinstein (CRR) model is that they were able to value path-independent derivatives using binomial trees with a very simple formula, without any need to worry about explicitly building two trees or applying the martingale property. If the option payoff can be written as $h(S(n=N))$, where $h:\mathbb{R}\mapsto\mathbb{R}$ is a continuous function and $N$ is the total number of steps of the model (i.e. the derivative is path-independent), then its value is given by
 
@@ -71,7 +287,7 @@ $$V(0)=(1+R)^{-N}\times\sum_{k=0}^{N}{N\choose k}q^{k}(1-q)^{N-k}h\left(S(0)(1+U
 
 ```{r}
 # CRR valuation
-dvt_price <- function(h, s, u, d, r, N) {
+dvt_crr <- function(h, s, u, d, r, N) {
   q <- (r - d) / (u - d)
   scenarios <- choose(N, 0:N) * q ^ (0:N) * (1 - q) ^ (N:0) * sapply(
     s * (1 + u) ^ (0:N) * (1 + d) ^ (N:0), h)
@@ -80,11 +296,8 @@ dvt_price <- function(h, s, u, d, r, N) {
 
 # Example: European Call
 
-# Option payoff - h(S)
-dvt_call <- function(s) max(s - 105, 0)
-
-# Option value - V(0)
-dvt_price(dvt_call, 100, 0.2, -0.1, 0.1, 3)
+# Option price - V(0)
+dvt_crr(dvt_call, 239.51, 0.03, -0.02, 0.00076 / 360, 2)
 ```
 
 ## References
