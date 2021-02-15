@@ -8,7 +8,7 @@ Disclaimer: Any information provided here do not constitute any kind of financia
 
 ### Long Trading European Options
 
-If you feel like trading options this Excel template is perfect for you. It allows you to price European stock options and analyze their inherent risks based on the famous Black-Scholes-Merton model, the Greek letters and the volatility smile; using real time data from [Yahoo Finance](https://finance.yahoo.com/). This template use Power Query to connect and transform market data, and VBA to run all financial modeling. On its five different sections, you will be able to assess thoroughly any potential or actual position on the market.
+If you feel like trading options this Excel template is perfect for you. It allows you to price European stock options and analyze their inherent risks based on the famous Black-Scholes-Merton model, the Greek letters and the volatility smile; using real time data from [Yahoo Finance](https://finance.yahoo.com/). This template uses Power Query to connect and transform market data, and VBA to run all financial modeling. On its five different sections, you will be able to assess thoroughly any potential or actual position on the market.
 
 #### Prerequisites
 
@@ -33,4 +33,26 @@ This template is connected to [Yahoo Finance](https://finance.yahoo.com/), which
 #### Download
 
 [Click here](/Excel/OptionsAnalysis.xlsm) to download the last version of the template.
+
+### Personal Finance Tracker
+
+If you are the kind of person who likes to manage your personal finance in much detail as possible, and if you also feel passionate for Accounting and Financial Analysis, this template is made for you. You will be able to build your own ledger and track your finances with all of the detail you want, relying on the most important financial statements and three dashboards to analyze you financial status: one for liquidity, other for indebtedness and a last one to assess the profitability of your savings.If you have problems dealing with this template feel free to contact me.  
+
+#### Prerequisites
+
+(i) Account principles understanding.
+
+(ii) A little bit of Financial Analysis.
+
+#### How to use it?
+
+Basically you need to do two things: keep you ledger and your investments up to date.
+
+1. To keep your ledger up to date hit one the *Ledger* button and input your numbers following the basic accounting principles for debits and credits.
+
+2. Hit on *NAV* and update your position on all of the funds you list on the Funds tab. Notice that market data is stored on tabs **LVA** and **Colcap** from files downloaded from [SIFI Colombia](https://sificcolombia.lvaindices.com/estadisticas/) and [BanRep](https://www.banrep.gov.co/es/estadisticas/mercado-accionario), respectively. You need to keep these files updated too. If you are not from Colombia you may want to change the source for another one with the same columns.
+
+#### Download
+
+[Click here](/Excel/PersonalFinance.xlsm) to download the last version of the template.
 
