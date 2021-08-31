@@ -6,6 +6,14 @@ images: ["/images/sample.jpg"]
 
 Disclaimer: Any information provided here do not constitute any kind of financial/investment advice. Instead, everything on this website constitutes nothing else than an exercise for academic purposes.
 
+### Colombian Financial System Health (Under Construction)
+
+Have you ever wonder if the Colombian financial system is healthy? How would you even assess the healthness of the financial system? The following Power BI dashboard allows you to analyze all categories of financial institutions, as well as individual financial institutions, using the main profitability, leverage and liquidity metrics, derived from the principal financial statements, i.e. the balance sheet and the income statement. Although the dashboard is in English, I left the original Spanish names of the institutions and their categories, so apologies if that creates confusion! 
+
+#### Download
+
+[Click here](https://app.powerbi.com/view?r=eyJrIjoiOTk5NTBhOWItMjc1My00OWJkLTg4ZjMtNzVjY2ZiNzkxZjkwIiwidCI6IjJiYmY5MzNkLTg1N2EtNDQyNy1iMTJmLTdiMzFkMWY0MGMxYSIsImMiOjR9) to access the Power BI dashboard.
+
 ### Long Trading European Options
 
 If you feel like trading options this Excel template is perfect for you. It allows you to price European stock options and analyze their inherent risks based on the famous Black-Scholes-Merton model, the Greek letters and the volatility smile; using real time data from [Yahoo Finance](https://finance.yahoo.com/). This template uses Power Query to connect and transform market data, and VBA to run all financial modeling. On its five different sections, you will be able to assess thoroughly any potential or actual position on the market.
@@ -24,7 +32,7 @@ If you feel like trading options this Excel template is perfect for you. It allo
 
 This template is connected to [Yahoo Finance](https://finance.yahoo.com/), which makes it easy to analyze any stock option with real time data. Therefore, you only need to know three things:
 
-1. If you don't want to analyze the ticket selected by default (ARI), go to *Data -> Queries & Connections -> Symbol (ARI)* and right-click on it. Select *Edit*, write the symbol of the underlying stock of the option you want to analyze and hit *Close & Load Data*. Finally hit on the *Refresh All* button in the Data tab. Don't worry if the Greeks section throws error messages. This is because the new data may not make sense for the options settled for analysis. This problem should be fixed after the second step.
+1. If you don't want to analyze the ticket selected by default (ARI), go to *Data -> Queries & Connections -> Symbol (ARI)* and right-click on it. Select *Edit*, write the symbol of the underlying stock of the option you want to analyze and hit *Close & Load Data*. Finally hit on the *Refresh All* button in the Data tab. Don't worry if the Greeks section throws error messages. This is because the new data may not make sense for the option settled for analysis. This problem should be fixed after the second step.
 
 2. In the section **POTENTIAL (OR ACTUAL) TRADE**, input the specifics of your current trade or potential trade that you are trying to analyze.
 
@@ -46,7 +54,7 @@ If you are the kind of person who likes to manage your personal finance in much 
 
 #### How to use it?
 
-Basically you need to do two things: keep you ledger and your investments up to date.
+Basically you need to do two things: keep your ledger and your investments up to date.
 
 1. To keep your ledger up to date hit one the *Ledger* button and input your numbers following the basic accounting principles for debits and credits.
 

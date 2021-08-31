@@ -1,0 +1,363 @@
+---
+title: "Monte Carlo Simulations and Risk Management"
+author: "Nicolas Cuesta Quintero"
+date: 2021-08-29T21:00:00-05:00
+categories: ["R"]
+tags: ["risk management", "Monte Carlo", "cholesky decomposition", "pca", "principal components analysis", "rstats"]
+---
+
+Managing portfolio price risk is one the main headaches of asset managers. When there is a single source of risk, measuring market risk becomes simple, and a straightforward approach can be used to calculate the value at risk (VaR) of a portfolio. However, this is usually not the case. Asset managers face multiple sources of risk, what increases the complexity of financial models rapidly. Simulating correlated sources of risk could lead to misspecifications of the model, the computational requirements of Monte Carlo methods increase with the number of assets, and the mathematical toolkit needs to be upgraded beyond a linear combination of known terms. In this post, I will show you how Ito's process can be used to simulate the price path of individual assets. Moreover, I will show you how to simulate the price path of multiple assets. Even though this would be an easy task if the portfolio assets had independent returns by assumption, we are going to use the Cholesky decomposition of the correlation matrix to manage the price risk of portfolios with correlated assets. 
+
+We will use the following libraries:
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+## A unique source of risk
+
+Modeling the risk factors of an investment requires to understand what is the stochastic behavior of the assets that form the portfolio. In other words, what is the stochastic process that is followed by the asset price. If a risk analyst knows how the price of the asset may evolve in the future, he can simulate multiple scenarios, calculate different percentiles, and get an idea of what could be the worst expected loss. This would require, however, to know the probability distribution of the price, or its returns. A common assumption based on empirical observations of stocks and currencies returns, is that returns are independently and identically distributed, following a normal distribution. Therefore, a Markov process can be used for stocks and currencies returns, or bonds yields, since their individual returns path are independent of their own history. Nevertheless, there are more stylized facts to be explained. In fact, stocks usually have a long-term trend, while bond prices revert to the face value by their maturity date. This led to a special type of processes that are used for simulating assets price paths, the Ito's process.
+
+### Ito's process
+
+Given an asset $x$, an Ito process describes the change of its price as
+
+\begin{equation}
+\Delta x_{t+1}=x_{t+1}-x_{t}=a(x,t)\Delta t+b(x,t)\Delta z_{t}.
+\end{equation}
+
+Here, $t$ stands for the time and $\Delta z_{t}\sim N(0,\Delta t)$ is a Weiner process. The function $a$ represent the mean behavior, while function $b$ the volatility of the process. Notice that the definition of $a$ and $b$ is what characterize the stylized facts of assets returns. 
+
+For stocks and exchange rates, whose price is denoted by $S$, we use the Geometric Brownian Montion (GBM). This is the particular case of a random walk with drift, i.e., we add a trend to the random walk. We define $a=\mu S$, where $\mu$ is the long-term average return continuously compounded, and $b=\sigma S$, where $\sigma$ the long-term (unconditional) volatility. Notice that the volatility term $b$ scales with the asset price so its unlikely to have negative stock prices, what would be expected due to the limited liability of shareholders. The GBM is given by
+
+$$\Delta S_{t+1}=\mu S_{t}\Delta t+\sigma S_{t}\Delta z_{t}.$$
+
+In practice, the limit of the model is taken ($dS\rightarrow 0$), so that $ln|S|$ follows a normal distribution and $S$ a log-normal distribution. This implies that over an interval of time $\Delta t$, the ending price is
+
+\begin{equation}
+S_{t+1}=S_{t}e^{(\mu-\sigma^{2}/2)\Delta t +\sigma z_{t}}.
+\end{equation}
+
+For interest rates we would expect a mean-reversion process instead. The GBM possess a drift, or a trend, and does not fit the empirical data observed in bonds yields. A second type of Ito process, called the one factor Ornstein-Uhlenbeck process, is used for modelling interest rates and commodities. This is the case of a bond that matches its face value at its maturity date, assuming there is no default in the loan payments. In general, it can be written as
+
+\begin{equation}
+\Delta r_{t}=\kappa(\theta-r_{t})\Delta t+\sigma r_{t}^{\gamma}\Delta z_{t},
+\end{equation}
+
+where $0\leq\kappa<1$, $\theta>0$ and $\sigma\geq 0$. Notice that this is a mean reverting process. When interest rates are higher than the mean value $\theta$, the difference is negative, and the value moves towards the mean level. Vice versa when interest rates are lower than the mean value. Two of the most known methods that derives from this one are the Vacisek model, when $\gamma =0$, and the Hull and White model, that also assumes $\theta=\theta(t)$ to model the current term structure of interest rates.
+
+It is worth to mention that one of the biggest markets has been left out, the real estate market. Markov processes, and therefore Ito's process, are not recommended to simulate real estate capital returns. Observations of real estate price indices, such as NCREIF NPI or UK IPD, have shown positive serial correlation of returns, so today's price depends on past values. Methods for simulating real estate prices often create an exponential weighted average of previous index values and an underlying efficient market process (GBM), but that would be a conversation that drives us out of scope.
+
+### Generating random numbers
+
+Previous processes simulation depends on the generation of random numbers. However, computers cannot generate random numbers, but algorithms have been developed to generate pseudo-random numbers, i.e., numbers that look and feel like random ones, but they are not. In the words of Donald Knuth, *"random numbers should not be generated with a method chosen at random. Some theory should be used."*. There are multiple methods to generate random numbers that follow a specific probability distribution, but most of them start with the uniform distribution. 
+
+Say, you want to generate numbers $U_{n}$ that follow a uniform distribution between 0 and 1. The strategy is to generate integers in $[0,m]$ and the uniform numbers will given by
+
+$$U_{n}=\frac{X_{n}}{m}.$$
+
+Then, the question is how to generate random integers in the proposed interval. The most common method, introduced by Lehmer in 1949, is called the Linear Congruence Method. You need to pick four "magic numbers":
+
+- The modulus $m$, such that $0<m$;
+- The multiplier $a$, such that $0\leq a<m$;
+- The increment $c$, such that $0\leq c<m$;
+- The seed $X_{0}$, such that $0\leq X_{0}<m$.
+
+The desired sequence of uniform numbers is
+
+$$X_{n+1}=(aX_{n}+c)\,\text{mod}\, m.$$
+
+The main problem with the linear congruence method is the selection of the magic numbers. One issue that arise is that the sequence will sooner or later get into a loop, and repeat itself endlessly, as shown below. 
+
+```{r}
+# Linear Congruence random generator
+linear_congruence <- function(m, a, cc, x0, n = 1) {
+  if (sum(m < c(a, cc, x0)) > 0) stop("Conditions are not satisfied.")
+  if (sum(0 > c(a, cc, x0)) > 0) stop("Conditions are not satisfied.")
+  x <- vector("double"); x[1] <- x0
+  for (i in 1:n) x[i+1] <- (a * x[i] + cc) %% m
+  return(x / m)
+}
+
+# Plot
+linear_congruence(2 ^ 32, 1103515245, 12345, 241546, 10000) %>% 
+  enframe(name = "n", value = "U") %>%
+  ggplot(mapping = aes(x = n, y = U)) +
+  geom_point(size = 0.5)
+```
+
+In conclusion, with the right choice of magic numbers you can create a long data set following a uniform distribution in the interval $[0,1]$, but this does not solve the initial problem about generating the normal distributed numbers used in the Weiner process, $z_{t}$. Notice that we can write $z_{t}=\sqrt{\Delta t}\,\epsilon_{t}$, where $\epsilon_{t}\sim N(0,1)$, so we can focus on generating numbers for the standardize normal distribution. The proposed method in this post is called the inversion method, because is the most common one used by financial engineers. It exploits the fact that one-to-one cumulative distribution functions for continuous random variables, such as the normal, can be inverted to find the corresponding sequence of random numbers with the new distribution, from a sequence of uniform numbers. 
+
+Say $U\sim U(0,1)$. We want to generate random numbers $X$ with cdf $F_{X}$. Define $Y=F_{X}^{-1}(U)$, then
+
+$$F_{Y}(y)=P(Y<y)=P(F_{X}^{-1}(U)<y)=P(U<F_{X}(y)).$$
+
+Notice that $P(U<F_{X}(y))$ calculates the $X$ cdf for a number $y$, but returns that same number when compared to $U$, because this latter random variable is uniform. In other words, $P(U<F_{X}(y))=F_{X}(y)$. This implies that  $F_{Y}(y)=F_{X}(y)$ and, therefore, $X$ and $Y$ have the same probability distribution. Thus, you can evaluate $F_{X}^{-1}$ with the uniform distributed data set created with the linear congruence algorithm, and obtain numbers that distribute like $X$. If $X$ is an standardize normal random variable and random $u$ uniform number, we can find the corresponding $x$ by finding the root of
+
+$$f(x)=F_{X}(x)-u.$$
+
+This root can be find with one of the methods shown in previous posts (bisection or secant methods). Since there is no analytical solution for the normal cdf, a numerical method is also required for solving the integral (e.g. Simpson 3/8). 
+
+```{r, cache=TRUE}
+# Bisection method function
+bisection <- function(a, b, f, n = 100, tol = 1e-04, show = FALSE) {
+  if (f(a) * f(b) > 0) return("Method conditions not satisfied.")
+  for (k in 1:n) {
+    c <- (a + b) / 2
+    if (show) cat("k: ", k, "c:", c, "f: ", f(c), "\n")
+    if (f(c) == 0 || ((b - a) / 2) < tol) return(c)
+    if (f(a) * f(c) < 0) {
+      b <- c
+    } else {
+      a <- c
+    }
+  }
+  cat("No solution found after ", n, " iterations.")
+}
+
+# Standard normal pdf
+norm_pdf <- function(x) exp(-0.5 * x ^ 2) / sqrt( 2 * pi)
+
+# Standard normal cdf
+norm_cdf <- function(x) {
+  integrate(norm_pdf, lower = -100, upper = x)[1]$value
+}
+
+# Inversion method
+inv_method <- function(n, cdf) {
+  unif_numbers <- linear_congruence(2^32,1103515245,12345,241546,n)
+  sapply(unif_numbers, function(u) {
+    bisection(-10, 10, function(x) cdf(x) - u)
+  })
+}
+
+# Plot
+inv_method(10000, norm_cdf) %>% 
+  enframe(name = "n", value = "N") %>%
+  ggplot(mapping = aes(x = n, y = N)) +
+  geom_point(size = 0.5)
+```
+
+Notice that most of the dots lie in the middle (as seen from the y-axis). This is consistent with the bell shape of the standardize normal distribution. Also, numbers above the 7,500 iterations must be disregarded, because the linear congruence method fell into a loop. Finally, keep in mind that the code developed in this section is trying to replicate, for educational purposes, what a function like *stats::rnorm* would do. However, it is because the way it was structured. In the following sections we will use R core function instead.
+
+### Simulating one asset price path
+
+Consider a stock that follows a Geometric Brownian Motion, with an initial price of $S_{0}=100$. Let's assume that the annual continuously compounded returns and volatility are, respectively, $\mu=8\%$, $\sigma=14\%$. We can use the solution to the GBM equation to simulate the price path for the next 20 days. Standardized normal random numbers can be generated with the inversion method and $t=1/252=0.00397$.
+
+```{r}
+set.seed(20)
+
+# Function that simulates the path price for a stock
+sim_spot <- function(S, mu, sigma, dt = 1 / 252, n = 20L) {
+  price_path <- vector("double", n + 1L); price_path[1] <- S
+  for (i in 2L:(n + 1L)) {
+    price_path[i] <- price_path[i-1] * 
+      exp(
+        (mu - sigma ^ 2 / 2) * dt + sigma * sqrt(dt) * rnorm(1)
+      )
+  }
+  return(price_path)
+}
+
+# Plot of four different simulations
+map_dfr(
+  1:4,
+  function(x) {
+    tibble(
+      Simulation = x,
+      Day = 0:20,
+      Price = sim_spot(100, 0.08, 0.14)
+    )
+  }
+) %>% 
+  mutate(Simulation = factor(str_c("Trial - ", Simulation))) %>% 
+  ggplot(mapping = aes(x = Day, y = Price)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~Simulation)
+```
+
+Notice that simulations are based on the normal distribution. However, empirical observations for multiple markets show that asset returns have fat tails (*Kurtosis>3*), which is not the case for the normal distribution. In other words, these types of simulations may underestimate the probability and the negative effect of a market drop, so the asset manager exposure would probably be bigger than simulated. However, the outlier returns could not necessarily be due to fat tail returns. They could belong to a multivariate normal or could be the effect of a dynamic volatility. Anyway, multiple methods have been developed to deal with this limitation, being [Copulas](https://en.wikipedia.org/wiki/Copula_(probability_theory)) one the most common. 
+
+## Multiple sources of risk
+
+### The simple case
+
+If the assets returns were independent and identically distributed, the problem of simulating multiple assets is straightforward. The independence implies that the linear correlation is zero, and the method explained above can be repeated for each individual asset. Thus,
+
+$$\Delta S_{t+1,j}=\mu_{j} S_{t,j}\Delta t+\sigma_{t} S_{t,j}\Delta z_{t,j}.$$
+
+where $j=1,2,\dots,N$ stands for each of the $N$ assets modeled.
+
+### Two correlated assets
+
+We know how to sample from two independent univariate normal distributions $\eta_{1},\eta_{2}\sim N(0,1)$, such that $cov[\eta_{1},\eta_{2}]=0$. Just repeat the process of previous section twice. What we need is to simulate two correlated standard normal random variables $\epsilon_{1}$ and $\epsilon_{2}$ such that their variances remain $V[\epsilon_{1}]=V[\epsilon_{2}]=1$ and their covariance $cov[\epsilon_{1},\epsilon_{2}]=\rho$. For this purpose, we create the linear system
+
+$$
+\begin{bmatrix}
+\epsilon_{1}\\
+\epsilon_{2}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\alpha_{11} & \alpha_{12} \\
+\alpha_{21} & \alpha_{22}
+\end{bmatrix}
+\begin{bmatrix}
+\eta_{1}\\
+\eta_{2}
+\end{bmatrix}.
+$$
+
+We can assume without loss of generality that $\alpha_{12}=0$. Then, from the three conditions on the variances and the covariance, we deduce that $\alpha_{21}=\rho$ and $\alpha_{22}=(1-\rho^{2})^{1/2}$ (three unknowns, three equations). Thus,
+
+$$
+\begin{bmatrix}
+\epsilon_{1}\\
+\epsilon_{2}
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0 \\
+\rho & (1-\rho^{2})^{1/2}
+\end{bmatrix}
+\begin{bmatrix}
+\eta_{1}\\
+\eta_{2}
+\end{bmatrix}.
+$$
+
+We found a way to simulate the two standard normal random variables such that they have a given correlation. We can apply previous equation to each pair of random numbers of the standardize normal sequences, and conclude the correct sequence of the bivariate distribution for the Ito process. 
+
+### Cholesky Decompositon
+
+Notice one thing of previous example,
+
+$$\begin{bmatrix}
+1 & 0 \\
+\rho & (1-\rho^{2})^{1/2}
+\end{bmatrix}
+\begin{bmatrix}
+1 & 0 \\
+\rho & (1-\rho^{2})^{1/2}
+\end{bmatrix}^{T}
+=
+\begin{bmatrix}
+1 & \rho \\
+\rho & 1
+\end{bmatrix}=\Sigma.$$
+
+This means that the lower triangular matrix that allows us to determine correlated sequences of random numbers, multiplied times itself transposed, lead to the covariance matrix between the two random sequences $\epsilon_{1}$ and $\epsilon_{2}$. This is an important result, because Cholesky factorization states the semi-definite positive matrices, like the covariance matrix, can be written as the product of a lower triangular matrix and itself transposed. In conclusion, we can generalize the example of two random sequences to any number $n$ just by calculating the Cholesky factorization of the covariance matrix between the returns of the assets.
+
+Say, $\Sigma$ is the covariance matrix between the assets we want to simulate. We find its Cholesky decomposition $\Sigma=LL^{T}$ using a numerical algorithm, like explained below. The random numbers we want will belong to a sequences of vectors, each of them defined as $\epsilon=L\eta$, where $\eta$ is each one of the vectors of the sequence of independent random numbers. Notice that
+
+$$V[\epsilon]=E[\epsilon\epsilon^{T}]=E[(L\eta)(L\eta)^{T}]=LE[\eta\eta^{T}]L^{T}=LV[\eta]L^{T}=\Sigma.$$
+
+It is worth to mention that R provides the function *base::chol*, based on LINPACK package, to calculate the Cholesky decomposition. This function makes the proper verifications before calculating the left diagonal matrix. However, to fully demomnstrate the method from scratch, I follow a variant of Gaussian elimination provided by (Ackleh, Allen, Hearfott, & Seshaiyer, 2009). According to this method, if $A$ is an $n\times n$ semi-definite positive matrix, we set $l_{j1}=a_{j1}$ for $j=1,\dots , n$. Then, for $i=1,\dots , n$, set
+
+$$l_{ii}=\left[a_{ii}-\sum_{k=1}^{i-1}l_{ik}^{2}\right]^{1/2};$$
+
+$$l_{ji}=\frac{1}{l_{ii}}\left[a_{ji}-\sum_{k=1}^{i-1}l_{ik}l_{jk}\right]^{1/2},\,\text{for}\,\, i+1\leq j\leq n.$$
+
+```{r}
+# Function that decompose as semi-definite positive matrix
+# using Cholesky factorization
+cholesky_decom <- function(A) {
+  
+  # Check that A is a square semi-definite positive matrix
+  
+  n <- ncol(A)
+  L <- matrix(rep(0, n * n), ncol = n)
+  L[1:n, 1] <- A[1:n, 1] / sqrt(A[1, 1])
+  for (i in 2:n) {
+    j <- i
+    while (j <= n) {
+      if (i == j) {
+        L[i, i] <- sqrt(A[i, i] - sum((L[i, 1:(i-1)]) ^ 2))
+      } else {
+        L[j, i] <- (A[j, i]-sum(L[i, 1:(i-1)]*L[j, 1:(i-1)]))/L[i, i]
+      }
+      j <- j + 1
+    }
+  }
+  
+  return(L)
+}
+
+# Function that simulates the path price for n correlated stocks
+sim_spot <- function(S, mu, sigma, dt = 1 / 252, n = 20L) {
+
+  number_assets <- length(S)
+  
+  # Generate correlated normal random numbers
+  L <- cholesky_decom(sigma)
+  epsilon <- lapply(1:n, function(x) {
+    as.vector(L %*% as.matrix(rnorm(number_assets)))
+  })
+  
+  # Simulate prices path
+  price_path <- matrix(nrow = n + 1L, ncol = number_assets)
+  price_path[1, 1:number_assets] <- S
+  for (i in 2:(n + 1)) {
+    price_path[i,1:number_assets] <- price_path[i-1,1:number_assets] *
+      exp(
+        (mu - (diag(sigma) ^ 2) / 2) * dt + 
+          diag(sigma) * sqrt(dt) * epsilon[[i - 1]]
+      )
+  }
+  
+  return(price_path)
+}
+
+# Plot of four different simulations for sample data
+set.seed(100)
+## Input
+S <- c(100, 100, 100)
+mu <- c(0.10, 0.12, 0.08)
+sigma <- matrix(
+  c(
+    0.1538, 0.0243, 0.0526,
+    0.0243, 0.0613, 0.0209,
+    0.0526, 0.0209, 0.1236
+  ), 
+  nrow = 3, ncol = 3
+)
+## Plot
+map_dfr(
+  1:4,
+  function(x) {
+    simulation <- sim_spot(S, mu, sigma) %>% 
+      `colnames<-`(str_c("S", 1:length(S))) %>% 
+      as_tibble()
+    
+    bind_cols(
+      tibble(Simulation = x, Day = 0:20), 
+      simulation
+    )
+  }
+) %>% 
+  mutate(Simulation = factor(str_c("Trial - ", Simulation))) %>% 
+  pivot_longer(cols=S1:S3,names_to="Stock",values_to="Price") %>% 
+  ggplot(mapping = aes(x = Day, y = Price, color = Stock)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~Simulation)
+
+```
+
+Notice that the number of assets increase rapidly the size of the covariance matrix, and reduce the performance of the algorithm. A recommneded approach to reduce the dimensionality of the problem would be using [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis). This method reduce the size of the covariance matrix based on the relative explanatory power of each asset, depending on the relative weight of its eigenvalue. I will leave this topic for another post. 
+
+## References
+
+*Ackleh, A. S., Allen, E. J., Hearfott, R. B., & Seshaiyer, P. (2009). Classical and Modern Numerical Analysis (1st ed., Vol. 1). Boca Raton, Florida: CRC Press.*
+
+*Hull, J. C. (2015). Risk Management and Financial Institutions (4th ed., Vol. 1). Hoboken, New Jersey: Wiley.*
+
+*Jones, O., Maillardet, R., & Robinson, A. (2009). Introduction to Scientific Programming and Simulation Using R (1st ed., Vol. 1). Boca Raton, Florida: CRC Press.*
+
+*Jorion, P. (2011). Financial Risk Manager Handbook (6th ed., Vol. 1). Hoboken, New Jersey: John Wiley & Sons, Inc.*
+
+*Knuth, D. E. (1998). The Art of Computer Programming (3th ed., Vol. 2). United States of America: Addison Wesley Longman.*
+
+
+

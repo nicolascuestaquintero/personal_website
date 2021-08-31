@@ -6,7 +6,7 @@ images: ["/images/sample.jpg"]
 
 **Welcome to my personal website,**
 
-I created this website to get people to know my work, to share some of my knowledge in Computational Finance and to create tools that people may find useful for their personal finance and their jobs. I will do my best to have some practical tools in the Tools section. Moreover, you can find my posts in the Blog section, where I will be solving interesting problems and replicating interesting research papers main results.
+I created this website to get people to know my work, to share some of my knowledge in Computational Finance and Real Estate Finance. To create tools that people may find useful for their personal finance and their jobs. I strongly believe that combining numerical and computational methods with modern financial theory is one of the most powerful combination Finance practicioners have at hand. I will be driving this conversation through multiple examples in the Blog section, where I will be solving interesting problems and replicating interesting research papers main results. Moreover, I will do my best to have some practical templates in the Tools section. Hopefully you find this site interesting, and can learn as much as I did while writing it.
 
 *The opinions expressed in this website represent my own and not those of my employer.* 
 

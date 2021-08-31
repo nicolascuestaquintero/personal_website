@@ -7,10 +7,19 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Nicolás Cuesta Quintero ©</copyright>
-    <lastBuildDate>Thu, 04 Feb 2021 00:00:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 29 Aug 2021 21:00:00 -0500</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Monte Carlo Simulations and Risk Management</title>
+      <link>/post/post_seven/</link>
+      <pubDate>Sun, 29 Aug 2021 21:00:00 -0500</pubDate>
+      
+      <guid>/post/post_seven/</guid>
+      <description>Managing portfolio price risk is one the main headaches of asset managers. When there is a single source of risk, measuring market risk becomes simple, and a straightforward approach can be used to calculate the value at risk (VaR) of a portfolio. However, this is usually not the case. Asset managers face multiple sources of risk, what increases the complexity of financial models rapidly. Simulating correlated sources of risk could lead to misspecifications of the model, the computational requirements of Monte Carlo methods increase with the number of assets, and the mathematical toolkit needs to be upgraded beyond a linear combination of known terms.</description>
+    </item>
     
     <item>
       <title>Binomial Trees and the Cox-Ross-Rubinstein Model</title>
