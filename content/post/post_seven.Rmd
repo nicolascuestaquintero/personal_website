@@ -138,7 +138,7 @@ inv_method(10000, norm_cdf) %>%
   geom_point(size = 0.5)
 ```
 
-Notice that most of the dots lie in the middle (as seen from the y-axis). This is consistent with the bell shape of the standardize normal distribution. Also, numbers above the 7,500 iterations must be disregarded, because the linear congruence method fell into a loop. Finally, keep in mind that the code developed in this section is trying to replicate, for educational purposes, what a function like *stats::rnorm* would do. However, it is because the way it was structured. In the following sections we will use R core function instead.
+Notice that most of the dots lie in the middle (as seen from the y-axis). This is consistent with the bell shape of the standardize normal distribution. Also, numbers above the 7,500 iterations must be disregarded, because the linear congruence method fell into a loop. Finally, keep in mind that the code developed in this section is trying to replicate, for educational purposes, what a function like *stats::rnorm* would do. However, it is slower because the way it was structured. In the following sections we will use R core function instead.
 
 ### Simulating one asset price path
 
@@ -253,7 +253,7 @@ Say, $\Sigma$ is the covariance matrix between the assets we want to simulate. W
 
 $$V[\epsilon]=E[\epsilon\epsilon^{T}]=E[(L\eta)(L\eta)^{T}]=LE[\eta\eta^{T}]L^{T}=LV[\eta]L^{T}=\Sigma.$$
 
-It is worth to mention that R provides the function *base::chol*, based on LINPACK package, to calculate the Cholesky decomposition. This function makes the proper verifications before calculating the left diagonal matrix. However, to fully demomnstrate the method from scratch, I follow a variant of Gaussian elimination provided by (Ackleh, Allen, Hearfott, & Seshaiyer, 2009). According to this method, if $A$ is an $n\times n$ semi-definite positive matrix, we set $l_{j1}=a_{j1}$ for $j=1,\dots , n$. Then, for $i=1,\dots , n$, set
+It is worth to mention that R provides the function *base::chol*, based on LINPACK package, to calculate the Cholesky decomposition. This function makes the proper verifications before calculating the left diagonal matrix. However, to fully demomnstrate the method from scratch, I follow a variant of Gaussian elimination provided by (Ackleh, Allen, Hearfott, & Seshaiyer, 2009). According to this method, if $A$ is an $n\times n$ semi-definite positive matrix, we set $l_{j1}=a_{j1}/\sqrt{a_{11}}$ for $j=1,\dots , n$. Then, for $i=1,\dots , n$, set
 
 $$l_{ii}=\left[a_{ii}-\sum_{k=1}^{i-1}l_{ik}^{2}\right]^{1/2};$$
 
